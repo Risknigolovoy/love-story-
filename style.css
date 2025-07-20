@@ -8,226 +8,177 @@
     --pink-main: #ff1493;
 }
 
-body {
+/* ИСПРАВЛЕНИЕ ПРОКРУТКИ */
+html, body {
+    height: 100%;
     margin: 0;
     font-family: 'Inter', 'Arial', sans-serif;
     background-color: var(--bg-color);
     color: var(--text-color);
+}
+
+body {
     display: flex;
     justify-content: center;
     align-items: center;
-    height: 100vh;
-    overflow: hidden;
+    overflow-y: auto; /* Позволяем прокрутку, если нужно */
 }
 
-/* Анимированный звёздный фон */
 .stars {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
     background: url('https://www.transparenttextures.com/patterns/stardust.png');
     animation: move-back 200s linear infinite;
-    z-index: 0;
+    z-index: -1;
 }
 
 @keyframes move-back {
-    from { background-position: 0 0; }
-    to { background-position: -10000px 5000px; }
+    from { background-position: 0 0; } to { background-position: -10000px 5000px; }
 }
 
-/* --- Контейнеры приложения --- */
+/* --- ЭКРАН ЗАГРУЗКИ --- */
+.loader {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background-color: var(--bg-color);
+    display: flex; flex-direction: column; justify-content: center; align-items: center;
+    z-index: 100;
+    transition: opacity 1s ease-out;
+}
+.loader.hidden { opacity: 0; pointer-events: none; }
+
+.loader-hearts { display: flex; }
+.loader-heart {
+    width: 50px; height: 50px; background-color: var(--pink-main);
+    position: relative; transform: rotate(-45deg); margin: 0 15px;
+    animation: loader-pulse 1.5s infinite ease-in-out;
+}
+.loader-heart:before, .loader-heart:after {
+    content: ''; position: absolute; width: 50px; height: 50px;
+    border-radius: 50%; background-color: var(--pink-main);
+}
+.loader-heart:before { top: -25px; left: 0; }
+.loader-heart:after { top: 0; left: 25px; }
+.loader-heart:nth-child(2) { animation-delay: -0.3s; }
+
+@keyframes loader-pulse {
+    0%, 100% { transform: scale(1) rotate(-45deg); }
+    50% { transform: scale(1.1) rotate(-45deg); }
+}
+
+.loader-text {
+    margin-top: 50px; font-size: 1.2rem; color: var(--purple-light);
+    animation: fade-in-text 2s infinite alternate;
+}
+@keyframes fade-in-text {
+    from { opacity: 0.5; } to { opacity: 1; }
+}
+
+/* --- Основное приложение --- */
 .app-container {
-    position: relative;
-    z-index: 1;
-    width: 100%;
-    max-width: 400px;
-    height: 90vh;
-    max-height: 800px;
-    background: var(--container-bg);
-    backdrop-filter: blur(10px);
-    border-radius: 20px;
-    box-shadow: 0 8px 32px 0 rgba(138, 43, 226, 0.37);
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
+    width: 100%; max-width: 420px;
+    min-height: 85vh; /* Минимальная высота */
+    background: var(--container-bg); backdrop-filter: blur(10px);
+    border-radius: 20px; box-shadow: 0 8px 32px 0 rgba(138, 43, 226, 0.37);
+    display: flex; flex-direction: column;
+    margin: 20px;
 }
+.app-container.hidden { display: none; }
 
-.app-nav {
-    display: flex;
-    padding: 8px;
-    background: rgba(0, 0, 0, 0.2);
-}
+.app-nav { display: flex; padding: 8px; background: rgba(0, 0, 0, 0.2); }
+.app-content { flex-grow: 1; overflow-y: auto; padding: 16px; }
 
-.app-content {
-    flex-grow: 1;
-    overflow-y: auto;
-    padding: 16px;
-}
-
-/* --- Стили для вкладок и навигации --- */
 .nav-button {
-    flex: 1;
-    padding: 12px;
-    border: none;
-    background: transparent;
-    color: var(--text-color);
-    font-size: 1rem;
-    border-radius: 12px;
-    cursor: pointer;
-    transition: all 0.3s ease;
+    flex: 1; padding: 12px; border: none; background: transparent;
+    color: var(--text-color); font-size: 1rem; border-radius: 12px;
+    cursor: pointer; transition: all 0.3s ease;
 }
+.nav-button.active { background: var(--purple-main); box-shadow: 0 0 15px var(--purple-main); }
 
-.nav-button.active {
-    background: var(--purple-main);
-    box-shadow: 0 0 15px var(--purple-main);
-}
+.view { display: none; flex-direction: column; align-items: center; }
+.view.active-view { display: flex; }
 
-.view {
-    display: none;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    height: 100%;
-    animation: fade-in 0.5s ease;
-}
-
-.view.active-view {
-    display: flex;
-}
-
-@keyframes fade-in {
-    from { opacity: 0; transform: translateY(10px); }
-    to { opacity: 1; transform: translateY(0); }
-}
-
-/* --- Вкладка "Сердце" --- */
+/* --- ВКЛАДКА "СЕРДЦА" (НОВЫЕ СТИЛИ) --- */
+.hearts-container { display: flex; justify-content: space-around; width: 100%; margin: 20px 0; }
+.heart-wrapper { text-align: center; }
 .heart-svg {
-    width: 150px;
-    cursor: pointer;
-    fill: var(--pink-main);
-    filter: drop-shadow(0 0 15px var(--pink-main));
+    width: 100px; height: 100px; background-color: var(--pink-main);
+    position: relative; transform: rotate(-45deg); margin: 10px auto;
     animation: pulse 2.5s infinite ease-in-out;
-    transition: all 0.5s ease;
+    transition: background-color 0.5s ease;
+    display: flex; justify-content: center; align-items: center;
+}
+.heart-svg:before, .heart-svg:after {
+    content: ''; position: absolute; width: 100px; height: 100px;
+    border-radius: 50%; background-color: inherit;
+}
+.heart-svg:before { top: -50px; left: 0; }
+.heart-svg:after { top: 0; left: 50px; }
+
+.mood-emoji {
+    font-size: 48px; z-index: 1; transform: rotate(45deg);
+    text-shadow: 0 0 5px rgba(0,0,0,0.5);
+    transition: transform 0.3s ease;
 }
 
-@keyframes pulse {
-    0%, 100% { transform: scale(1); }
-    50% { transform: scale(1.1); }
+.controls-wrapper { margin-top: 20px; width: 100%; }
+.controls-title { text-align: center; margin: 15px 0 10px; color: var(--purple-light); }
+.mood-selector { display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; }
+.mood-option {
+    font-size: 24px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 50%; width: 50px; height: 50px; cursor: pointer;
+    transition: all 0.2s;
 }
+.mood-option:hover, .mood-option.active { background: var(--purple-main); transform: scale(1.1); }
 
-.love-message {
-    margin: 24px 0;
-    min-height: 60px;
-    font-size: 1.1rem;
-    line-height: 1.5;
-    text-align: center;
-    color: var(--purple-light);
-}
-
-.action-button {
-    padding: 15px 30px;
-    border-radius: 50px;
-    border: none;
-    color: #fff;
-    font-size: 1rem;
-    font-weight: bold;
-    cursor: pointer;
-    transition: transform 0.2s, box-shadow 0.3s;
-    background: linear-gradient(45deg, var(--purple-main), var(--pink-main));
-    box-shadow: 0 4px 20px rgba(138, 43, 226, 0.5);
-}
-.action-button.orange {
-    background: linear-gradient(45deg, #ff8c00, #ff4500);
-    box-shadow: 0 4px 20px rgba(255, 140, 0, 0.5);
-}
-.action-button.purple {
-    background: var(--purple-main);
-    box-shadow: 0 4px 20px rgba(138, 43, 226, 0.5);
-}
-
-.action-button:hover { transform: scale(1.05); }
-.action-button:active { transform: scale(0.95); }
-
-.color-palette {
-    margin-top: 32px;
-    display: flex;
-    gap: 15px;
-}
-
+.color-palette { display: flex; justify-content: center; gap: 15px; }
 .color-dot {
-    width: 35px;
-    height: 35px;
-    border-radius: 50%;
-    cursor: pointer;
-    border: 2px solid rgba(255, 255, 255, 0.7);
-    transition: transform 0.2s;
+    width: 35px; height: 35px; border-radius: 50%; cursor: pointer;
+    border: 2px solid rgba(255, 255, 255, 0.7); transition: transform 0.2s;
 }
 .color-dot:hover { transform: scale(1.2); }
+.info-text { text-align: center; margin-top: 20px; color: #888; font-size: 0.9rem; }
 
-/* --- Вкладка "Игра" --- */
+/* --- Стили игры (без изменений) --- */
 .game-screen { width: 100%; text-align: center; }
 .game-screen.hidden { display: none; }
 .game-title { font-size: 1.5rem; font-weight: bold; }
 .game-subtitle { margin-top: 8px; color: var(--purple-light); }
-#game-actions { width: 100%; }
-#create-game-btn { margin-bottom: 16px; width: 100%; }
+#game-actions, #hearts-connect-screen { width: 100%; }
+#create-game-btn, #create-hearts-room-btn { margin-bottom: 16px; width: 100%; }
 .divider { margin: 16px 0; color: #888; }
 .join-form { display: flex; flex-direction: column; gap: 8px; }
 .game-input {
-    flex-grow: 1;
-    padding: 12px;
-    text-align: center;
-    color: var(--text-color);
-    background: rgba(0,0,0,0.3);
-    border: 2px solid var(--purple-main);
-    border-radius: 12px;
-    font-size: 1rem;
-    text-transform: uppercase;
+    flex-grow: 1; padding: 12px; text-align: center; color: var(--text-color);
+    background: rgba(0,0,0,0.3); border: 2px solid var(--purple-main);
+    border-radius: 12px; font-size: 1rem; text-transform: uppercase;
 }
 .error-message { margin-top: 12px; color: #ff5555; min-height: 20px; }
-
-/* Стили чата */
 #game-chat-screen { display: none; flex-direction: column; height: 100%; }
 .game-info { padding-bottom: 8px; border-bottom: 1px solid #444; }
 .game-id { color: var(--pink-main); font-weight: bold; cursor: pointer; }
 .copy-success { color: #4ade80; font-size: 0.8rem; margin-left: 8px; }
-.chat-window { flex-grow: 1; overflow-y: auto; padding: 12px 0; }
+.chat-window { flex-grow: 1; overflow-y: auto; padding: 12px 0; max-height: 40vh; }
 .chat-form { display: flex; gap: 8px; padding-top: 8px; border-top: 1px solid #444; }
 .chat-input {
-    flex-grow: 1;
-    padding: 10px 15px;
-    background: rgba(0,0,0,0.3);
-    border: 1px solid #555;
-    border-radius: 20px;
-    color: var(--text-color);
+    flex-grow: 1; padding: 10px 15px; background: rgba(0,0,0,0.3);
+    border: 1px solid #555; border-radius: 20px; color: var(--text-color);
 }
 .send-button {
-    background: var(--pink-main);
-    border: none;
-    border-radius: 50%;
-    width: 40px;
-    height: 40px;
-    color: white;
-    font-size: 1.2rem;
-    cursor: pointer;
+    background: var(--pink-main); border: none; border-radius: 50%;
+    width: 40px; height: 40px; color: white; font-size: 1.2rem; cursor: pointer;
 }
 .send-button:disabled { background: #555; }
-
-/* Стили сообщений в чате */
 .message-wrapper { display: flex; margin-bottom: 12px; }
 .message-wrapper.user { justify-content: flex-end; }
 .message-wrapper.partner { justify-content: flex-start; }
 .message-wrapper.game { justify-content: center; }
-
 .message {
-    padding: 8px 12px;
-    border-radius: 16px;
-    max-width: 80%;
-    word-wrap: break-word;
+    padding: 8px 12px; border-radius: 16px; max-width: 80%; word-wrap: break-word;
 }
 .message.user { background: #007bff; border-bottom-right-radius: 4px; }
 .message.partner { background: #444; border-bottom-left-radius: 4px; }
 .message.game { background: var(--purple-main); font-style: italic; text-align: center; }
-.message.thinking { animation: pulse 1.5s infinite; }
+
+@keyframes pulse {
+    0%, 100% { transform: scale(1) rotate(-45deg); }
+    50% { transform: scale(1.05) rotate(-45deg); }
+}
