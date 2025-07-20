@@ -8,6 +8,7 @@
     <script src="script.js" defer></script>
 </head>
 <body>
+    <!-- ЭКРАН ЗАГРУЗКИ -->
     <div id="loader" class="loader">
         <div class="loader-hearts">
             <div class="loader-heart"></div>
@@ -16,17 +17,19 @@
         <p class="loader-text">Создаю наш маленький мир...</p>
     </div>
 
+    <!-- ОСНОВНОЕ ПРИЛОЖЕНИЕ -->
     <div id="app" class="app-container hidden">
         <nav class="app-nav">
             <button id="nav-heart" class="nav-button active" data-view="heart-view">Сердца</button>
             <button id="nav-game" class="nav-button" data-view="game-view">Игра</button>
         </nav>
         <main class="app-content">
+            <!-- ВКЛАДКА "СЕРДЦА" -->
             <div id="heart-view" class="view active-view">
                 <div id="hearts-connect-screen" class="game-screen">
                     <h2 class="game-title">Наша комната</h2>
                     <p class="game-subtitle">Создайте общую комнату, чтобы видеть сердца и настроения друг друга.</p>
-                    <button id="create-hearts-room-btn" class="action-button orange">Создать комнату</button>
+                    <button id="create-hearts-room-btn" class="action-button orange">Создать</button>
                     <div class="divider">ИЛИ</div>
                     <form id="join-hearts-room-form" class="join-form">
                         <input type="text" id="join-hearts-room-input" placeholder="Введи код комнаты" class="game-input"/>
@@ -34,65 +37,53 @@
                     </form>
                     <p id="hearts-error" class="error-message"></p>
                 </div>
-
                 <div id="hearts-display-screen" class="game-screen hidden">
                     <div class="hearts-container">
                         <div class="heart-wrapper">
                             <p>Он</p>
-                            <div id="heart1" class="heart-svg">
+                            <div id="heart1" class="heart-svg-wrapper">
+                                <svg class="heart-svg" viewBox="0 0 32 29.6"><path d="M23.6,0c-3.4,0-6.3,2.7-7.6,5.6C14.7,2.7,11.8,0,8.4,0C3.8,0,0,3.8,0,8.4c0,9.4,9.5,11.9,16,21.2 c6.1-9.3,16-12.1,16-21.2C32,3.8,28.2,0,23.6,0z"/></svg>
                                 <span id="mood1" class="mood-emoji">❤️</span>
                             </div>
                         </div>
                         <div class="heart-wrapper">
                             <p>Она</p>
-                            <div id="heart2" class="heart-svg">
+                            <div id="heart2" class="heart-svg-wrapper">
+                                <svg class="heart-svg" viewBox="0 0 32 29.6"><path d="M23.6,0c-3.4,0-6.3,2.7-7.6,5.6C14.7,2.7,11.8,0,8.4,0C3.8,0,0,3.8,0,8.4c0,9.4,9.5,11.9,16,21.2 c6.1-9.3,16-12.1,16-21.2C32,3.8,28.2,0,23.6,0z"/></svg>
                                 <span id="mood2" class="mood-emoji">❤️</span>
                             </div>
                         </div>
                     </div>
-
                     <p id="compliment-text" class="compliment-text"></p>
-                    
                     <div class="controls-wrapper">
                         <p class="controls-title">Твоё настроение:</p>
-                        <div id="mood-selector" class="mood-selector">
-                            <button class="mood-option">❤️</button>
-                            <button class="mood-option">😊</button>
-                            <button class="mood-option">🥰</button>
-                            <button class="mood-option">😔</button>
-                            <button class="mood-option">🔥</button>
-                            <button class="mood-option">😴</button>
-                        </div>
+                        <div id="mood-selector" class="mood-selector"></div>
                         <p class="controls-title">Твой цвет:</p>
                         <div id="color-palette" class="color-palette"></div>
                     </div>
-                     <p class="info-text">Код комнаты: <strong id="hearts-room-id"></strong></p>
+                    <p class="info-text">Код комнаты: <strong id="hearts-room-id"></strong></p>
                 </div>
             </div>
 
+            <!-- ВКЛАДКА "ИГРА" -->
             <div id="game-view" class="view">
                 <div id="game-connect-screen" class="game-screen">
-                    <h2 class="game-title">Совместная игра</h2>
-                    <p class="game-subtitle">Создай игру и поделись кодом, или присоединись к существующей.</p>
-                    <button id="create-game-btn" class="action-button orange">Создать новую игру</button>
+                    <h2 class="game-title">Приключение для двоих</h2>
+                    <p class="game-subtitle">Создайте игру и поделись кодом, или присоединитесь к существующей.</p>
+                    <button id="create-game-btn" class="action-button orange">Начать новое приключение</button>
                     <div class="divider">ИЛИ</div>
                     <form id="join-game-form" class="join-form">
-                        <input type="text" id="join-game-input" placeholder="Введи код комнаты" class="game-input"/>
-                        <button type="submit" class="action-button purple">Войти</button>
+                        <input type="text" id="join-game-input" placeholder="Введи код игры" class="game-input"/>
+                        <button type="submit" class="action-button purple">Присоединиться</button>
                     </form>
-                     <p id="game-error" class="error-message"></p>
+                    <p id="game-error" class="error-message"></p>
                 </div>
                 <div id="game-chat-screen" class="game-screen hidden">
-                    <div class="game-info">
-                        <p>Код комнаты (поделись им):</p>
-                        <strong id="game-id-display" class="game-id"></strong>
-                        <span id="copy-success" class="copy-success"></span>
-                    </div>
-                    <div id="chat-window" class="chat-window"></div>
-                    <form id="chat-form" class="chat-form">
-                        <input type="text" id="chat-input" placeholder="Ваш ответ..." class="chat-input" autocomplete="off"/>
-                        <button id="send-btn" type="submit" class="send-button">➤</button>
-                    </form>
+                    <div id="game-story-text" class="game-story-text"></div>
+                    <div id="game-options" class="game-options"></div>
+                    <div id="game-waiting-text" class="game-waiting-text hidden">Ожидание ответа партнёра...</div>
+                    <div id="game-results-text" class="game-results-text"></div>
+                    <p class="info-text">Код игры: <strong id="game-id-display"></strong></p>
                 </div>
             </div>
         </main>
