@@ -5,38 +5,17 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Для Тебя ❤️</title>
     <link rel="stylesheet" href="style.css">
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, setDoc, onSnapshot, updateDoc, arrayUnion, getDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-        
-        // Передаем функции в глобальный объект window, чтобы наш основной скрипт мог их использовать
-        window.firebase = {
-            initializeApp,
-            getAuth,
-            signInAnonymously,
-            onAuthStateChanged,
-            getFirestore,
-            doc,
-            setDoc,
-            onSnapshot,
-            updateDoc,
-            arrayUnion,
-            getDoc,
-            serverTimestamp
-        };
-    </script>
-    <script src="script.js" type="module" defer></script>
+    <!-- Подключаем только основной скрипт -->
+    <script src="script.js" defer></script>
 </head>
 <body>
+    <!-- Вся остальная структура остаётся без изменений -->
     <div class="stars"></div>
-
     <div class="app-container">
         <nav class="app-nav">
             <button id="nav-heart" class="nav-button active" data-view="heart-view">Сердце</button>
             <button id="nav-game" class="nav-button" data-view="game-view">Игра</button>
         </nav>
-
         <main class="app-content">
             <div id="heart-view" class="view active-view">
                 <svg id="heart-svg" class="heart-svg" viewBox="0 0 32 29.6">
@@ -52,22 +31,27 @@
                     <div class="color-dot" style="background-color: #7ad7ff;" data-color="#7ad7ff"></div>
                 </div>
             </div>
-
             <div id="game-view" class="view">
                 <div id="game-connect-screen" class="game-screen">
                     <h2 class="game-title">Совместная игра</h2>
-                    <p class="game-subtitle">Создайте игру и поделитесь кодом, или присоединитесь к существующей.</p>
-                    <button id="create-game-btn" class="action-button orange">Создать новую игру</button>
-                    <div class="divider">ИЛИ</div>
-                    <form id="join-game-form" class="join-form">
-                        <input type="text" id="join-game-input" placeholder="Введите код игры" class="game-input"/>
-                        <button type="submit" class="action-button purple">Войти</button>
+                    <p class="game-subtitle">Вставьте ваш ключ API от jsonbin.io, чтобы начать.</p>
+                    <form id="api-key-form" class="join-form">
+                        <input type="password" id="api-key-input" placeholder="Вставь API Key сюда" class="game-input"/>
+                        <button type="submit" class="action-button purple">Сохранить ключ</button>
                     </form>
-                    <p id="game-error" class="error-message"></p>
+                    <div id="game-actions" class="hidden">
+                        <button id="create-game-btn" class="action-button orange">Создать новую игру</button>
+                        <div class="divider">ИЛИ</div>
+                        <form id="join-game-form" class="join-form">
+                            <input type="text" id="join-game-input" placeholder="Введи код комнаты" class="game-input"/>
+                            <button type="submit" class="action-button purple">Войти</button>
+                        </form>
+                    </div>
+                     <p id="game-error" class="error-message"></p>
                 </div>
                 <div id="game-chat-screen" class="game-screen hidden">
                     <div class="game-info">
-                        <p>Код игры (нажми, чтобы скопировать):</p>
+                        <p>Код комнаты (поделись им):</p>
                         <strong id="game-id-display" class="game-id"></strong>
                         <span id="copy-success" class="copy-success"></span>
                     </div>
