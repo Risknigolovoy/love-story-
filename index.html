@@ -9,14 +9,17 @@
     <script src="script.js" defer></script>
 </head>
 <body>
-    <!-- Вся остальная структура остаётся без изменений -->
+    <!-- Анимированный фон -->
     <div class="stars"></div>
+
+    <!-- Основной контейнер приложения -->
     <div class="app-container">
         <nav class="app-nav">
             <button id="nav-heart" class="nav-button active" data-view="heart-view">Сердце</button>
             <button id="nav-game" class="nav-button" data-view="game-view">Игра</button>
         </nav>
         <main class="app-content">
+            <!-- ВКЛАДКА "СЕРДЦЕ" -->
             <div id="heart-view" class="view active-view">
                 <svg id="heart-svg" class="heart-svg" viewBox="0 0 32 29.6">
                     <path d="M23.6,0c-3.4,0-6.3,2.7-7.6,5.6C14.7,2.7,11.8,0,8.4,0C3.8,0,0,3.8,0,8.4c0,9.4,9.5,11.9,16,21.2c6.1-9.3,16-12.1,16-21.2C32,3.8,28.2,0,23.6,0z"/>
@@ -31,15 +34,12 @@
                     <div class="color-dot" style="background-color: #7ad7ff;" data-color="#7ad7ff"></div>
                 </div>
             </div>
+            <!-- ВКЛАДКА "ИГРА" -->
             <div id="game-view" class="view">
                 <div id="game-connect-screen" class="game-screen">
                     <h2 class="game-title">Совместная игра</h2>
-                    <p class="game-subtitle">Вставьте ваш ключ API от jsonbin.io, чтобы начать.</p>
-                    <form id="api-key-form" class="join-form">
-                        <input type="password" id="api-key-input" placeholder="Вставь API Key сюда" class="game-input"/>
-                        <button type="submit" class="action-button purple">Сохранить ключ</button>
-                    </form>
-                    <div id="game-actions" class="hidden">
+                    <p class="game-subtitle">Создай игру и поделись кодом, или присоединись к существующей.</p>
+                    <div id="game-actions">
                         <button id="create-game-btn" class="action-button orange">Создать новую игру</button>
                         <div class="divider">ИЛИ</div>
                         <form id="join-game-form" class="join-form">
