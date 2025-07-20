@@ -8,7 +8,6 @@
     <script src="script.js" defer></script>
 </head>
 <body>
-    <!-- ЭКРАН ЗАГРУЗКИ -->
     <div id="loader" class="loader">
         <div class="loader-hearts">
             <div class="loader-heart"></div>
@@ -17,16 +16,13 @@
         <p class="loader-text">Создаю наш маленький мир...</p>
     </div>
 
-    <!-- ОСНОВНОЕ ПРИЛОЖЕНИЕ (скрыто до загрузки) -->
     <div id="app" class="app-container hidden">
         <nav class="app-nav">
             <button id="nav-heart" class="nav-button active" data-view="heart-view">Сердца</button>
             <button id="nav-game" class="nav-button" data-view="game-view">Игра</button>
         </nav>
         <main class="app-content">
-            <!-- ВКЛАДКА "СЕРДЦА" -->
             <div id="heart-view" class="view active-view">
-                <!-- Экран подключения к комнате сердец -->
                 <div id="hearts-connect-screen" class="game-screen">
                     <h2 class="game-title">Наша комната</h2>
                     <p class="game-subtitle">Создайте общую комнату, чтобы видеть сердца и настроения друг друга.</p>
@@ -39,17 +35,14 @@
                     <p id="hearts-error" class="error-message"></p>
                 </div>
 
-                <!-- Экран с сердцами -->
                 <div id="hearts-display-screen" class="game-screen hidden">
                     <div class="hearts-container">
-                        <!-- Сердце 1 (Твоё) -->
                         <div class="heart-wrapper">
-                            <p>Ты</p>
+                            <p>Он</p>
                             <div id="heart1" class="heart-svg">
                                 <span id="mood1" class="mood-emoji">❤️</span>
                             </div>
                         </div>
-                        <!-- Сердце 2 (Её) -->
                         <div class="heart-wrapper">
                             <p>Она</p>
                             <div id="heart2" class="heart-svg">
@@ -57,6 +50,8 @@
                             </div>
                         </div>
                     </div>
+
+                    <p id="compliment-text" class="compliment-text"></p>
                     
                     <div class="controls-wrapper">
                         <p class="controls-title">Твоё настроение:</p>
@@ -75,7 +70,6 @@
                 </div>
             </div>
 
-            <!-- ВКЛАДКА "ИГРА" -->
             <div id="game-view" class="view">
                 <div id="game-connect-screen" class="game-screen">
                     <h2 class="game-title">Совместная игра</h2>
