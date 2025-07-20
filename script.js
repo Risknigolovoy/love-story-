@@ -1,6 +1,8 @@
 document.addEventListener('DOMContentLoaded', () => {
     // --- Глобальные переменные ---
-    let apiKey = localStorage.getItem('jsonBinApiKey'); // Ключ будет храниться в браузере
+    // ВАШ КЛЮЧ УЖЕ ВСТАВЛЕН ЗДЕСЬ
+    const apiKey = '$2a$10$EIdkYYUdFQ6kRpT0OobuU.YjsENOEz9Un3ljT398QIIR0nRqXmFEq';
+    
     let currentBinId = null;
     let pollingInterval = null;
     const userId = sessionStorage.getItem('userId') || `user_${Math.random().toString(36).substring(2, 9)}`;
@@ -13,9 +15,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const loveMessageEl = document.getElementById('love-message');
     const messageButton = document.getElementById('message-button');
     const colorPalette = document.getElementById('color-palette');
-    const apiKeyForm = document.getElementById('api-key-form');
-    const apiKeyInput = document.getElementById('api-key-input');
-    const gameActions = document.getElementById('game-actions');
     const gameConnectScreen = document.getElementById('game-connect-screen');
     const gameChatScreen = document.getElementById('game-chat-screen');
     const createGameBtn = document.getElementById('create-game-btn');
@@ -29,21 +28,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const chatInput = document.getElementById('chat-input');
     const sendBtn = document.getElementById('send-btn');
 
-    // --- Инициализация ---
-    function initialize() {
-        setupEventListeners();
-        if (apiKey) {
-            apiKeyForm.classList.add('hidden');
-            gameActions.classList.remove('hidden');
-        }
-    }
-
     // --- Настройка обработчиков событий ---
     function setupEventListeners() {
         navButtons.forEach(button => button.addEventListener('click', switchView));
         messageButton.addEventListener('click', showNewLoveMessage);
         colorPalette.addEventListener('click', changeHeartColor);
-        apiKeyForm.addEventListener('submit', saveApiKey);
         createGameBtn.addEventListener('click', createGame);
         joinGameForm.addEventListener('submit', joinGame);
         chatForm.addEventListener('submit', sendMessage);
@@ -57,20 +46,6 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById(targetViewId).classList.add('active-view');
         navButtons.forEach(btn => btn.classList.remove('active'));
         e.target.classList.add('active');
-    }
-
-    function saveApiKey(e) {
-        e.preventDefault();
-        const key = apiKeyInput.value.trim();
-        if (key) {
-            apiKey = key;
-            localStorage.setItem('jsonBinApiKey', key);
-            apiKeyForm.classList.add('hidden');
-            gameActions.classList.remove('hidden');
-            gameErrorEl.textContent = '';
-        } else {
-            gameErrorEl.textContent = 'Ключ не может быть пустым.';
-        }
     }
 
     // --- Логика JSONbin.io ---
@@ -92,7 +67,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 headers: {
                     'Content-Type': 'application/json',
                     'X-Master-Key': apiKey,
-                    'X-Collection-Id': 'a0f2d0d5-8b7c-4a6a-8b0d-5c6a5b1f3e2d' // Общая коллекция для всех игр
                 },
                 body: JSON.stringify(initialData)
             });
@@ -116,11 +90,12 @@ document.addEventListener('DOMContentLoaded', () => {
             gameErrorEl.textContent = 'Введите код комнаты.';
             return;
         }
-        // Проверяем, существует ли комната
+        gameErrorEl.textContent = 'Подключаюсь...';
         try {
             const response = await fetch(`${binApiUrl}/${binId}/latest`, { headers: { 'X-Master-Key': apiKey } });
             if (!response.ok) throw new Error('Комната не найдена.');
             currentBinId = binId;
+            gameErrorEl.textContent = '';
             switchToChatView(currentBinId);
         } catch (error) {
             gameErrorEl.textContent = error.message;
@@ -143,7 +118,6 @@ document.addEventListener('DOMContentLoaded', () => {
             try {
                 const response = await fetch(`${binApiUrl}/${currentBinId}/latest`, { headers: { 'X-Master-Key': apiKey } });
                 if (!response.ok) {
-                    // Если комната удалена или ошибка, останавливаем опрос
                     clearInterval(pollingInterval);
                     return;
                 }
@@ -164,19 +138,17 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!text) return;
 
         sendBtn.disabled = true;
+        const tempMessage = text;
         chatInput.value = '';
 
         try {
-            // 1. Получаем текущие данные
             const getRes = await fetch(`${binApiUrl}/${currentBinId}/latest`, { headers: { 'X-Master-Key': apiKey } });
             const data = await getRes.json();
             const currentMessages = data.record.messages || [];
 
-            // 2. Добавляем новое сообщение
-            const newMessage = { sender: userId, text, timestamp: new Date().toISOString() };
+            const newMessage = { sender: userId, text: tempMessage, timestamp: new Date().toISOString() };
             const updatedMessages = [...currentMessages, newMessage];
 
-            // 3. Обновляем "бин"
             const putRes = await fetch(`${binApiUrl}/${currentBinId}`, {
                 method: 'PUT',
                 headers: {
@@ -188,11 +160,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (!putRes.ok) throw new Error('Не удалось отправить сообщение.');
             
-            // Сразу отображаем отправленное сообщение
             renderMessages(updatedMessages);
 
         } catch (error) {
             console.error(error);
+            chatInput.value = tempMessage; // Возвращаем текст, если отправка не удалась
         } finally {
             sendBtn.disabled = false;
         }
@@ -200,7 +172,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function renderMessages(messages) {
         const lastMessageCount = chatWindow.children.length;
-        if (messages.length === lastMessageCount) return; // Не перерисовывать, если ничего не изменилось
+        if (messages.length === lastMessageCount) return;
 
         chatWindow.innerHTML = '';
         messages.forEach(msg => {
@@ -228,5 +200,5 @@ document.addEventListener('DOMContentLoaded', () => {
     function copyGameId() { navigator.clipboard.writeText(gameIdDisplay.textContent).then(() => { copySuccessEl.textContent = 'Скопировано!'; setTimeout(() => copySuccessEl.textContent = '', 2000); }); }
 
     // --- Запуск приложения ---
-    initialize();
+    setupEventListeners();
 });
