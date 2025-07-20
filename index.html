@@ -1,376 +1,84 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { initializeApp } from 'firebase/app';
-import { getAuth, signInAnonymously, onAuthStateChanged } from 'firebase/auth';
-import { 
-    getFirestore, 
-    doc, 
-    setDoc, 
-    onSnapshot, 
-    updateDoc, 
-    arrayUnion, 
-    getDoc,
-    serverTimestamp
-} from 'firebase/firestore';
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Для Тебя ❤️</title>
+    <link rel="stylesheet" href="style.css">
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, onSnapshot, updateDoc, arrayUnion, getDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        
+        // Передаем функции в глобальный объект window, чтобы наш основной скрипт мог их использовать
+        window.firebase = {
+            initializeApp,
+            getAuth,
+            signInAnonymously,
+            onAuthStateChanged,
+            getFirestore,
+            doc,
+            setDoc,
+            onSnapshot,
+            updateDoc,
+            arrayUnion,
+            getDoc,
+            serverTimestamp
+        };
+    </script>
+    <script src="script.js" type="module" defer></script>
+</head>
+<body>
+    <div class="stars"></div>
 
-// --- Конфигурация Firebase ---
-// Эти переменные будут предоставлены окружением, в котором запускается код.
-const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
-const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-love-game-app';
+    <div class="app-container">
+        <nav class="app-nav">
+            <button id="nav-heart" class="nav-button active" data-view="heart-view">Сердце</button>
+            <button id="nav-game" class="nav-button" data-view="game-view">Игра</button>
+        </nav>
 
-// --- Основной компонент приложения ---
-export default function App() {
-    // Состояние для навигации между вкладками
-    const [view, setView] = useState('heart'); // 'heart' или 'game'
-    
-    // Состояния для Firebase
-    const [db, setDb] = useState(null);
-    const [auth, setAuth] = useState(null);
-    const [userId, setUserId] = useState(null);
-    const [isAuthReady, setIsAuthReady] = useState(false);
-
-    // Инициализация Firebase и аутентификация при первом запуске
-    useEffect(() => {
-        try {
-            const app = initializeApp(firebaseConfig);
-            const firestoreDb = getFirestore(app);
-            const authInstance = getAuth(app);
-            
-            setDb(firestoreDb);
-            setAuth(authInstance);
-
-            // Слушатель изменения состояния аутентификации
-            onAuthStateChanged(authInstance, (user) => {
-                if (user) {
-                    setUserId(user.uid);
-                } else {
-                    // Если пользователя нет, входим анонимно
-                    signInAnonymously(authInstance).catch(error => {
-                        console.error("Ошибка анонимного входа:", error);
-                    });
-                }
-                setIsAuthReady(true);
-            });
-        } catch (error) {
-            console.error("Ошибка инициализации Firebase:", error);
-            setIsAuthReady(true); // Все равно разрешаем рендер, чтобы показать ошибку
-        }
-    }, []);
-
-    // Основной рендер приложения
-    return (
-        <div className="bg-[#0a001a] text-white min-h-screen font-sans flex flex-col items-center justify-center p-4 relative overflow-hidden">
-            {/* Анимированный фон со звездами */}
-            <div className="absolute top-0 left-0 w-full h-full bg-[url('https://www.transparenttextures.com/patterns/stardust.png')] animate-move-back"></div>
-            
-            <div className="z-10 w-full max-w-md mx-auto bg-[#1a0d2e] bg-opacity-70 backdrop-blur-md rounded-2xl shadow-2xl shadow-purple-500/20 overflow-hidden flex flex-col" style={{height: '90vh'}}>
-                {/* Навигация */}
-                <nav className="flex p-2 bg-black bg-opacity-20">
-                    <button onClick={() => setView('heart')} className={`flex-1 py-3 text-center rounded-lg transition-all duration-300 ${view === 'heart' ? 'bg-purple-600 shadow-lg' : 'hover:bg-purple-900/50'}`}>
-                        Сердце
-                    </button>
-                    <button onClick={() => setView('game')} className={`flex-1 py-3 text-center rounded-lg transition-all duration-300 ${view === 'game' ? 'bg-pink-600 shadow-lg' : 'hover:bg-pink-900/50'}`}>
-                        Игра
-                    </button>
-                </nav>
-
-                {/* Отображение контента в зависимости от выбранной вкладки */}
-                <div className="flex-grow p-4 overflow-y-auto">
-                    {view === 'heart' && <HeartView />}
-                    {view === 'game' && isAuthReady && db && userId && <GameView db={db} userId={userId} />}
-                    {view === 'game' && !isAuthReady && <p>Загрузка...</p>}
+        <main class="app-content">
+            <div id="heart-view" class="view active-view">
+                <svg id="heart-svg" class="heart-svg" viewBox="0 0 32 29.6">
+                    <path d="M23.6,0c-3.4,0-6.3,2.7-7.6,5.6C14.7,2.7,11.8,0,8.4,0C3.8,0,0,3.8,0,8.4c0,9.4,9.5,11.9,16,21.2c6.1-9.3,16-12.1,16-21.2C32,3.8,28.2,0,23.6,0z"/>
+                </svg>
+                <p id="love-message" class="love-message">Нажми на кнопочку ниже...</p>
+                <button id="message-button" class="action-button">Для тебя...</button>
+                <div id="color-palette" class="color-palette">
+                    <div class="color-dot" style="background-color: #ff7a7a;" data-color="#ff7a7a"></div>
+                    <div class="color-dot" style="background-color: #a27aff;" data-color="#a27aff"></div>
+                    <div class="color-dot" style="background-color: #7affb8;" data-color="#7affb8"></div>
+                    <div class="color-dot" style="background-color: #f5ff7a;" data-color="#f5ff7a"></div>
+                    <div class="color-dot" style="background-color: #7ad7ff;" data-color="#7ad7ff"></div>
                 </div>
             </div>
-        </div>
-    );
-}
 
-// --- Компонент вкладки "Сердце" ---
-function HeartView() {
-    const [heartColor, setHeartColor] = useState('#ff7a7a');
-    const [message, setMessage] = useState('Нажми на кнопочку ниже...');
-
-    const messages = [
-        "Расстояние — лишь проверка, насколько сильной может быть любовь. Я тебя люблю!",
-        "Считаю минуты до нашей встречи. Безумно скучаю.",
-        "Каждый день без тебя тянется вечно. Мысленно обнимаю тебя крепко-крепко.",
-        "Ты — моё самое яркое солнышко, даже когда мы далеко друг от друга.",
-        "Закрой глаза и почувствуй мой поцелуй. Он летит к тебе через все километры.",
-        "Пусть это сердечко напомнит тебе обо мне. Я всегда рядом, в твоём сердце.",
-    ];
-
-    const showNewMessage = () => {
-        const randomIndex = Math.floor(Math.random() * messages.length);
-        setMessage(messages[randomIndex]);
-    };
-
-    const colorPalette = ['#ff7a7a', '#a27aff', '#7affb8', '#f5ff7a', '#7ad7ff'];
-
-    return (
-        <div className="flex flex-col items-center justify-center h-full text-center animate-fade-in">
-            <svg id="heart" className="w-40 cursor-pointer transition-all duration-500" viewBox="0 0 32 29.6" style={{ fill: heartColor, filter: `drop-shadow(0 0 15px ${heartColor}88)`, animation: 'pulse 2.5s infinite ease-in-out' }}>
-                <path d="M23.6,0c-3.4,0-6.3,2.7-7.6,5.6C14.7,2.7,11.8,0,8.4,0C3.8,0,0,3.8,0,8.4c0,9.4,9.5,11.9,16,21.2c6.1-9.3,16-12.1,16-21.2C32,3.8,28.2,0,23.6,0z"/>
-            </svg>
-
-            <p className="mt-6 mb-5 min-h-[60px] text-lg text-purple-200">{message}</p>
-
-            <button onClick={showNewMessage} className="px-8 py-3 font-bold text-white transition-all duration-300 bg-gradient-to-r from-purple-600 to-pink-500 rounded-full shadow-lg hover:scale-105 active:scale-95">
-                Для тебя...
-            </button>
-
-            <div className="flex gap-4 mt-8">
-                {colorPalette.map(color => (
-                    <div key={color} onClick={() => setHeartColor(color)} className="w-8 h-8 rounded-full cursor-pointer transition-transform hover:scale-125 border-2 border-white/70" style={{ backgroundColor: color }}></div>
-                ))}
-            </div>
-        </div>
-    );
-}
-
-// --- Компонент вкладки "Игра" ---
-function GameView({ db, userId }) {
-    const [gameId, setGameId] = useState('');
-    const [gameData, setGameData] = useState(null);
-    const [error, setError] = useState('');
-    const [newMessage, setNewMessage] = useState('');
-    const [isGameMasterThinking, setIsGameMasterThinking] = useState(false);
-    const chatEndRef = useRef(null);
-
-    // Подписка на изменения в игре
-    useEffect(() => {
-        if (!gameId) return;
-
-        const gameRef = doc(db, `artifacts/${appId}/public/data/games`, gameId);
-        const unsubscribe = onSnapshot(gameRef, (doc) => {
-            if (doc.exists()) {
-                const data = doc.data();
-                // Сортируем сообщения по времени
-                if (data.messages) {
-                    data.messages.sort((a, b) => a.timestamp?.toMillis() - b.timestamp?.toMillis());
-                }
-                setGameData(data);
-                setError('');
-            } else {
-                setError('Игра с таким кодом не найдена.');
-                setGameData(null);
-            }
-        });
-
-        return () => unsubscribe();
-    }, [gameId, db]);
-    
-    // Автоматическая прокрутка чата вниз
-    useEffect(() => {
-        chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }, [gameData?.messages]);
-
-
-    // Создание новой игры
-    const handleCreateGame = async () => {
-        const newGameId = Math.random().toString(36).substring(2, 8).toUpperCase();
-        const gameRef = doc(db, `artifacts/${appId}/public/data/games`, newGameId);
-        const initialMessage = {
-            text: "Темная пещера окутывает вас... Вдалеке мерцает одинокий кристалл. Что вы будете делать?",
-            sender: 'Game',
-            timestamp: serverTimestamp()
-        };
-        await setDoc(gameRef, {
-            players: [userId],
-            messages: [initialMessage],
-            createdAt: serverTimestamp()
-        });
-        setGameId(newGameId);
-    };
-
-    // Присоединение к игре
-    const handleJoinGame = async (idToJoin) => {
-        if (!idToJoin) {
-            setError('Введите код игры.');
-            return;
-        }
-        const gameRef = doc(db, `artifacts/${appId}/public/data/games`, idToJoin);
-        const gameSnap = await getDoc(gameRef);
-
-        if (gameSnap.exists()) {
-            await updateDoc(gameRef, {
-                players: arrayUnion(userId)
-            });
-            setGameId(idToJoin);
-        } else {
-            setError('Игра с таким кодом не найдена.');
-        }
-    };
-
-    // Отправка сообщения
-    const handleSendMessage = async (e) => {
-        e.preventDefault();
-        if (!newMessage.trim() || isGameMasterThinking) return;
-
-        const messageData = {
-            text: newMessage,
-            sender: userId,
-            timestamp: serverTimestamp()
-        };
-
-        const gameRef = doc(db, `artifacts/${appId}/public/data/games`, gameId);
-        await updateDoc(gameRef, {
-            messages: arrayUnion(messageData)
-        });
-        setNewMessage('');
-        
-        // Запускаем логику "Игры" после ответа пользователя
-        triggerGameMaster();
-    };
-    
-    // Логика "Мастера Игры" (используем Gemini API)
-    const triggerGameMaster = async () => {
-        setIsGameMasterThinking(true);
-        
-        const recentMessages = gameData.messages.slice(-5).map(m => `${m.sender === 'Game' ? 'Мастер Игры' : 'Игрок'}: ${m.text}`).join('\n');
-        const prompt = `Ты — таинственный Мастер Игры в романтической текстовой игре для пары, которая находится на расстоянии. Их цель — вместе преодолевать испытания. Основываясь на их последних действиях, создай короткое (1-2 предложения), интригующее и немного загадочное продолжение истории или испытание. Не давай прямых решений, а создавай атмосферу. Вот их последние сообщения:\n\n${recentMessages}\n\nТвой ответ:`;
-
-        try {
-            const chatHistory = [{ role: "user", parts: [{ text: prompt }] }];
-            const payload = { contents: chatHistory };
-            const apiKey = ""; // API-ключ не требуется, если используется gemini-2.0-flash
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
-
-            const response = await fetch(apiUrl, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
-
-            if (!response.ok) {
-                throw new Error(`API call failed with status: ${response.status}`);
-            }
-
-            const result = await response.json();
-            
-            if (result.candidates && result.candidates.length > 0) {
-                const gameResponseText = result.candidates[0].content.parts[0].text;
-                const gameMessage = {
-                    text: gameResponseText,
-                    sender: 'Game',
-                    timestamp: serverTimestamp()
-                };
-                const gameRef = doc(db, `artifacts/${appId}/public/data/games`, gameId);
-                await updateDoc(gameRef, {
-                    messages: arrayUnion(gameMessage)
-                });
-            } else {
-                 throw new Error("No content in API response");
-            }
-
-        } catch (apiError) {
-            console.error("Ошибка Мастера Игры:", apiError);
-            // Можно добавить сообщение об ошибке в чат
-        } finally {
-            setIsGameMasterThinking(false);
-        }
-    };
-
-
-    // --- Рендер компонента Игры ---
-
-    // Если нет ID игры, показываем экран подключения
-    if (!gameId) {
-        let joinIdInput = '';
-        return (
-            <div className="flex flex-col items-center justify-center h-full text-center animate-fade-in">
-                <h2 className="text-2xl font-bold">Совместная игра</h2>
-                <p className="mt-2 text-purple-300">Создайте игру и поделитесь кодом с партнером, или присоединитесь к существующей.</p>
-                
-                <button onClick={handleCreateGame} className="w-full px-8 py-4 mt-8 font-bold text-white transition-all duration-300 bg-gradient-to-r from-pink-600 to-orange-500 rounded-lg shadow-lg hover:scale-105 active:scale-95">
-                    Создать новую игру
-                </button>
-
-                <div className="my-4 text-gray-400">ИЛИ</div>
-
-                <form onSubmit={(e) => { e.preventDefault(); handleJoinGame(joinIdInput); }} className="flex w-full gap-2">
-                    <input 
-                        type="text"
-                        placeholder="Введите код игры"
-                        onChange={(e) => joinIdInput = e.target.value.toUpperCase()}
-                        className="flex-grow p-4 text-center text-white bg-gray-800 border-2 border-purple-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500"
-                    />
-                    <button type="submit" className="px-6 py-4 font-bold text-white transition-all duration-300 bg-purple-600 rounded-lg shadow-lg hover:scale-105 active:scale-95">
-                        Войти
-                    </button>
-                </form>
-                {error && <p className="mt-4 text-red-400">{error}</p>}
-            </div>
-        );
-    }
-
-    // Если есть ID игры, показываем чат
-    return (
-        <div className="flex flex-col h-full">
-            <div className="p-2 text-center border-b border-purple-800">
-                <p className="text-sm text-gray-400">Код вашей игры (поделитесь им):</p>
-                <p className="text-xl font-bold tracking-widest text-pink-400">{gameId}</p>
-            </div>
-            
-            {/* Окно чата */}
-            <div className="flex-grow p-4 overflow-y-auto">
-                {gameData?.messages?.map((msg, index) => (
-                    <div key={index} className={`flex mb-4 ${msg.sender === userId ? 'justify-end' : 'justify-start'}`}>
-                        <div className={`max-w-xs lg:max-w-md px-4 py-3 rounded-2xl ${
-                            msg.sender === userId ? 'bg-blue-600 rounded-br-lg' : 
-                            msg.sender === 'Game' ? 'bg-purple-800 text-purple-200 italic rounded-lg w-full text-center' : 
-                            'bg-gray-700 rounded-bl-lg'
-                        }`}>
-                            <p className="text-white">{msg.text}</p>
-                        </div>
+            <div id="game-view" class="view">
+                <div id="game-connect-screen" class="game-screen">
+                    <h2 class="game-title">Совместная игра</h2>
+                    <p class="game-subtitle">Создайте игру и поделитесь кодом, или присоединитесь к существующей.</p>
+                    <button id="create-game-btn" class="action-button orange">Создать новую игру</button>
+                    <div class="divider">ИЛИ</div>
+                    <form id="join-game-form" class="join-form">
+                        <input type="text" id="join-game-input" placeholder="Введите код игры" class="game-input"/>
+                        <button type="submit" class="action-button purple">Войти</button>
+                    </form>
+                    <p id="game-error" class="error-message"></p>
+                </div>
+                <div id="game-chat-screen" class="game-screen hidden">
+                    <div class="game-info">
+                        <p>Код игры (нажми, чтобы скопировать):</p>
+                        <strong id="game-id-display" class="game-id"></strong>
+                        <span id="copy-success" class="copy-success"></span>
                     </div>
-                ))}
-                {isGameMasterThinking && (
-                     <div className="flex justify-start mb-4">
-                        <div className="max-w-xs px-4 py-3 italic bg-purple-800 rounded-lg lg:max-w-md text-purple-200">
-                            <p className="animate-pulse">Игра размышляет...</p>
-                        </div>
-                    </div>
-                )}
-                <div ref={chatEndRef} />
+                    <div id="chat-window" class="chat-window"></div>
+                    <form id="chat-form" class="chat-form">
+                        <input type="text" id="chat-input" placeholder="Ваш ответ..." class="chat-input" autocomplete="off"/>
+                        <button id="send-btn" type="submit" class="send-button">➤</button>
+                    </form>
+                </div>
             </div>
-
-            {/* Форма отправки сообщения */}
-            <form onSubmit={handleSendMessage} className="flex gap-2 p-4 border-t border-purple-800">
-                <input
-                    type="text"
-                    value={newMessage}
-                    onChange={(e) => setNewMessage(e.target.value)}
-                    placeholder="Ваш ответ..."
-                    className="flex-grow p-3 text-white bg-gray-800 border-2 border-purple-400 rounded-full focus:outline-none focus:ring-2 focus:ring-pink-500"
-                    disabled={isGameMasterThinking}
-                />
-                <button type="submit" className="px-6 py-3 font-bold text-white transition-all duration-300 bg-pink-600 rounded-full shadow-lg hover:scale-105 active:scale-95 disabled:bg-gray-500" disabled={isGameMasterThinking}>
-                    Отправить
-                </button>
-            </form>
-        </div>
-    );
-}
-
-// Добавляем стили для анимаций, которые не покрываются Tailwind
-const style = document.createElement('style');
-style.textContent = `
-    @keyframes pulse {
-        0%, 100% { transform: scale(1); }
-        50% { transform: scale(1.1); }
-    }
-    @keyframes move-back {
-        from { background-position: 0 0; }
-        to { background-position: -10000px 5000px; }
-    }
-    .animate-move-back {
-        animation: move-back 200s linear infinite;
-    }
-    @keyframes fade-in {
-        from { opacity: 0; transform: translateY(10px); }
-        to { opacity: 1; transform: translateY(0); }
-    }
-    .animate-fade-in {
-        animation: fade-in 0.5s ease-out;
-    }
-`;
-document.head.append(style);
+        </main>
+    </div>
+</body>
+</html>
