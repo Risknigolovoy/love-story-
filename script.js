@@ -2,12 +2,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Глобальные переменные ---
     const apiKey = '$2a$10$EIdkYYUdFQ6kRpT0OobuU.YjsENOEz9Un3ljT398QIIR0nRqXmFEq';
     const binApiUrl = 'https://api.jsonbin.io/v3/b';
-    const geminiApiKey = '';
-    const geminiApiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiApiKey}`;
-
-    let gamePollingInterval = null;
-    let heartsPollingInterval = null;
-    let complimentInterval = null;
+    
+    let pollingInterval = null;
     let userRole = null;
 
     const userId = sessionStorage.getItem('userId') || `user_${Math.random().toString(36).substring(2, 9)}`;
@@ -18,21 +14,23 @@ document.addEventListener('DOMContentLoaded', () => {
     const app = document.getElementById('app');
     const navButtons = document.querySelectorAll('.nav-button');
     
-    // ... (остальные элементы DOM)
+    // Сердца
     const heartsConnectScreen = document.getElementById('hearts-connect-screen');
     const heartsDisplayScreen = document.getElementById('hearts-display-screen');
     const createHeartsRoomBtn = document.getElementById('create-hearts-room-btn');
     const joinHeartsRoomForm = document.getElementById('join-hearts-room-form');
     const joinHeartsRoomInput = document.getElementById('join-hearts-room-input');
     const heartsErrorEl = document.getElementById('hearts-error');
-    const heart1El = document.getElementById('heart1');
-    const heart2El = document.getElementById('heart2');
+    const heart1Wrapper = document.getElementById('heart1');
+    const heart2Wrapper = document.getElementById('heart2');
     const mood1El = document.getElementById('mood1');
     const mood2El = document.getElementById('mood2');
     const moodSelector = document.getElementById('mood-selector');
     const colorPalette = document.getElementById('color-palette');
     const heartsRoomIdEl = document.getElementById('hearts-room-id');
     const complimentTextEl = document.getElementById('compliment-text');
+
+    // Игра
     const gameConnectScreen = document.getElementById('game-connect-screen');
     const gameChatScreen = document.getElementById('game-chat-screen');
     const createGameBtn = document.getElementById('create-game-btn');
@@ -40,24 +38,56 @@ document.addEventListener('DOMContentLoaded', () => {
     const joinGameInput = document.getElementById('join-game-input');
     const gameErrorEl = document.getElementById('game-error');
     const gameIdDisplay = document.getElementById('game-id-display');
-    const chatWindow = document.getElementById('chat-window');
-    const chatForm = document.getElementById('chat-form');
-    const chatInput = document.getElementById('chat-input');
-    const sendBtn = document.getElementById('send-btn');
-    
-    const lovePhrases = [ "Я люблю тебя больше, чем слова могут выразить.", "Каждый день я скучаю по тебе всё сильнее.", "Я боюсь потерять тебя, ты – мой мир.", "Прости, если моя любовь неидеальна. Я стараюсь.", "Даже на расстоянии, моё сердце всегда с тобой.", "Ты – первая мысль утром и последняя перед сном. Люблю.", "Скучаю по твоему смеху, он как музыка для меня.", "Мой самый большой страх – это мир, в котором нет тебя.", "Я люблю тебя не так, как ты заслуживаешь, а так, как умею – всем сердцем.", "Километры между нами ничего не значат. Я скучаю.", "Моя любовь к тебе – это единственное, в чём я уверен на 100%.", "Без тебя дни такие пустые. Скучаю ужасно.", "Пожалуйста, никогда не уходи. Я боюсь этой тишины.", "Прости за все моменты, когда я был неправ. Я люблю тебя.", "Расстояние учит меня ценить каждую секунду с тобой.", "Ты делаешь меня лучше. Я люблю тебя за это.", "Скучаю по твоим объятиям, в них я чувствовал себя дома.", "Я боюсь представить свою жизнь без твоей улыбки.", "Моя любовь к тебе растёт с каждым днём, даже если я этого не показываю.", "Мы далеко, но наши сердца бьются в унисон. Скучаю.", "Люблю тебя до луны и обратно.", "Каждая песня о любви теперь напоминает о тебе. Скучаю.", "Ты мой якорь в этом мире. Боюсь остаться без тебя.", "Прости, что иногда причиняю боль. Мои намерения всегда чисты.", "Я считаю дни до нашей встречи. Очень скучаю." ];
+    const gameStoryText = document.getElementById('game-story-text');
+    const gameOptions = document.getElementById('game-options');
+    const gameWaitingText = document.getElementById('game-waiting-text');
+    const gameResultsText = document.getElementById('game-results-text');
 
+    // --- Инициализация ---
     function initialize() {
         setTimeout(() => {
             loader.classList.add('hidden');
             app.classList.remove('hidden');
-        }, 6000);
+        }, 5000);
 
         setupEventListeners();
-        populateColorPalette();
+        populateControls();
         startComplimentCycle();
+        restoreSession();
     }
+    
+    // --- Логика игры ---
+    const gameStory = {
+        'start': {
+            text: 'Вы вдвоём оказались в мерцающем лесу. Воздух пахнет озоном и ночными цветами. Перед вами тропа расходится: одна ведет к поющему водопаду, другая — к таинственной пещере, из которой доносится тихая музыка.',
+            options: ['Идти к водопаду', 'Исследовать пещеру'],
+            logic: (p1, p2) => (p1 === p2) ? (p1 === 0 ? 'waterfall' : 'cave') : 'split_paths'
+        },
+        'waterfall': {
+            text: 'У водопада вы находите два светящихся камня. Один тёплый, как летнее солнце, другой — прохладный, как лунный свет. Вы можете взять только по одному.',
+            options: ['Взять тёплый камень', 'Взять холодный камень'],
+            logic: (p1, p2) => (p1 === p2) ? (p1 === 0 ? 'warm_ending' : 'cold_ending') : 'mix_ending'
+        },
+        'cave': {
+            text: 'В пещере стены усыпаны кристаллами. В центре стоит пьедестал с двумя шкатулками: одна из тёмного дерева, другая — из светлого перламутра.',
+            options: ['Открыть тёмную шкатулку', 'Открыть светлую шкатулку'],
+            logic: (p1, p2) => (p1 === p2) ? (p1 === 0 ? 'dark_ending' : 'bright_ending') : 'mix_ending'
+        },
+        'split_paths': {
+            text: 'Вы решили разделиться. Блуждая в одиночестве, вы понимаете, что магия этого места заключается в единстве. Тропинки снова сводят вас вместе, давая второй шанс. Перед вами снова водопад и пещера.',
+            options: ['К водопаду, на этот раз вместе', 'В пещеру, держась за руки'],
+            logic: (p1, p2) => (p1 === 0 || p2 === 0) ? 'waterfall' : 'cave'
+        },
+        'warm_ending': { text: 'Когда ваши тёплые камни соприкоснулись, они вспыхнули ярким светом, и лес вокруг вас расцвёл тысячами огней. Вы обрели дар согревать друг друга даже на расстоянии. Это ваша общая победа, построенная на тепле и доверии.', isEnd: true },
+        'cold_ending': { text: 'Холодные камни в ваших руках засияли чистым звёздным светом, открывая вам тайные тропы Вселенной. Вы научились понимать друг друга без слов, читая мысли в сиянии звёзд. Это ваша победа мудрости и спокойствия.', isEnd: true },
+        'dark_ending': { text: 'В тёмных шкатулках вы нашли древние артефакты, дарующие защиту от любых невзгод. Вы поняли, что вместе можете преодолеть любую тьму, ведь ваша любовь — самый надёжный щит. Это победа вашей смелости.', isEnd: true },
+        'bright_ending': { text: 'Светлые шкатулки наполнили пещеру музыкой и светом, показав вам картины вашего счастливого будущего. Вы обрели дар видеть лучшее друг в друге и вдохновлять на мечты. Это победа вашей надежды.', isEnd: true },
+        'mix_ending': { text: 'Ваши разные выборы создали нечто новое. Камни и шкатулки слились в один артефакт, который пульсирует и теплом, и холодом, и светом, и тенью. Вы поняли, что ваша сила — в принятии различий друг друга, создавая уникальную гармонию. Это ваша главная победа — победа любви, которая объединяет противоположности.', isEnd: true }
+    };
 
+    // ... (остальной код будет ниже)
+    
+    // --- Настройка и общие функции ---
     function setupEventListeners() {
         navButtons.forEach(button => button.addEventListener('click', switchView));
         createHeartsRoomBtn.addEventListener('click', createHeartsRoom);
@@ -66,52 +96,32 @@ document.addEventListener('DOMContentLoaded', () => {
         colorPalette.addEventListener('click', handleColorChange);
         createGameBtn.addEventListener('click', createGame);
         joinGameForm.addEventListener('submit', joinGame);
-        chatForm.addEventListener('submit', sendMessage);
+        gameOptions.addEventListener('click', handleGameChoice);
     }
 
     function switchView(e) {
-        clearInterval(heartsPollingInterval);
-        clearInterval(gamePollingInterval);
-        clearInterval(complimentInterval);
-
+        clearInterval(pollingInterval);
         const targetViewId = e.target.dataset.view;
         document.querySelectorAll('.view').forEach(view => view.classList.remove('active-view'));
         document.getElementById(targetViewId).classList.add('active-view');
         navButtons.forEach(btn => btn.classList.remove('active'));
         e.target.classList.add('active');
+        
+        const heartsBinId = sessionStorage.getItem('heartsBinId');
+        const gameBinId = sessionStorage.getItem('gameBinId');
 
-        if (targetViewId === 'hearts-view') {
-            startComplimentCycle();
-        }
+        if (targetViewId === 'hearts-view' && heartsBinId) startPolling(heartsBinId, updateHeartsUI);
+        else if (targetViewId === 'game-view' && gameBinId) startPolling(gameBinId, updateGameUI);
     }
-    
-    function startComplimentCycle() {
-        if (complimentInterval) clearInterval(complimentInterval);
-        const showNextCompliment = () => {
-            complimentTextEl.style.opacity = 0;
-            setTimeout(() => {
-                const randomIndex = Math.floor(Math.random() * lovePhrases.length);
-                complimentTextEl.textContent = lovePhrases[randomIndex];
-                complimentTextEl.style.opacity = 1;
-            }, 500);
-        };
-        showNextCompliment();
-        complimentInterval = setInterval(showNextCompliment, 8000);
-    }
-    
+
     function startPolling(binId, updateFunction) {
-        const intervalId = setInterval(async () => {
-            const currentBinId = sessionStorage.getItem(updateFunction === updateHeartsUI ? 'heartsBinId' : 'gameBinId');
-            if (currentBinId !== binId) {
-                clearInterval(intervalId);
-                return;
-            }
+        clearInterval(pollingInterval);
+        const fetchData = async () => {
             const data = await getBin(binId);
             if (data) updateFunction(data);
-        }, 3500);
-
-        if (updateFunction === updateHeartsUI) heartsPollingInterval = intervalId;
-        else gamePollingInterval = intervalId;
+        };
+        fetchData();
+        pollingInterval = setInterval(fetchData, 3500);
     }
 
     async function updateBin(binId, data) {
@@ -121,13 +131,13 @@ document.addEventListener('DOMContentLoaded', () => {
             body: JSON.stringify(data)
         });
     }
-    
+
     async function createBin(initialData, errorElement) {
         errorElement.textContent = 'Создаю...';
         try {
             const response = await fetch(binApiUrl, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'X-Master-Key': apiKey, 'X-Bin-Private': 'true'},
+                headers: { 'Content-Type': 'application/json', 'X-Master-Key': apiKey, 'X-Bin-Private': 'true' },
                 body: JSON.stringify(initialData)
             });
             if (!response.ok) throw new Error(`Ошибка сети: ${response.statusText}`);
@@ -139,7 +149,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return null;
         }
     }
-    
+
     async function getBin(binId, errorElement) {
         try {
             const response = await fetch(`${binApiUrl}/${binId}/latest`, { headers: { 'X-Master-Key': apiKey } });
@@ -152,8 +162,22 @@ document.addEventListener('DOMContentLoaded', () => {
             return null;
         }
     }
-
-    function populateColorPalette() {
+    
+    // --- Логика сердец и комплиментов ---
+    function startComplimentCycle() {
+        if (complimentInterval) clearInterval(complimentInterval);
+        const showNextCompliment = () => {
+            complimentTextEl.style.opacity = 0;
+            setTimeout(() => {
+                complimentTextEl.textContent = lovePhrases[Math.floor(Math.random() * lovePhrases.length)];
+                complimentTextEl.style.opacity = 1;
+            }, 500);
+        };
+        showNextCompliment();
+        complimentInterval = setInterval(showNextCompliment, 8000);
+    }
+    
+    function populateControls() {
         const colors = ['#ff7a7a', '#a27aff', '#7affb8', '#f5ff7a', '#7ad7ff', '#ffc0cb', '#ffffff'];
         colors.forEach(color => {
             const dot = document.createElement('div');
@@ -161,6 +185,13 @@ document.addEventListener('DOMContentLoaded', () => {
             dot.style.backgroundColor = color;
             dot.dataset.color = color;
             colorPalette.appendChild(dot);
+        });
+        const moods = ['❤️', '😊', '🥰', '😔', '🔥', '😴'];
+        moods.forEach(mood => {
+            const btn = document.createElement('button');
+            btn.className = 'mood-option';
+            btn.textContent = mood;
+            moodSelector.appendChild(btn);
         });
     }
 
@@ -171,7 +202,6 @@ document.addEventListener('DOMContentLoaded', () => {
         };
         const binId = await createBin(initialData, heartsErrorEl);
         if (binId) {
-            userRole = 'user1';
             sessionStorage.setItem('userRole', 'user1');
             switchToHeartsView(binId, initialData);
         }
@@ -181,17 +211,18 @@ document.addEventListener('DOMContentLoaded', () => {
         e.preventDefault();
         const binId = joinHeartsRoomInput.value.trim();
         if (!binId) return;
-        heartsErrorEl.textContent = 'Подключаюсь...';
-        
         const data = await getBin(binId, heartsErrorEl);
         if (data) {
-            if (data.user1.id === userId) userRole = 'user1';
+            let role = sessionStorage.getItem('userRole');
+            if (data.user1.id === userId) role = 'user1';
             else if (data.user2.id === null || data.user2.id === userId) {
-                userRole = 'user2';
-                data.user2.id = userId;
-                await updateBin(binId, data);
+                role = 'user2';
+                if (data.user2.id === null) {
+                    data.user2.id = userId;
+                    await updateBin(binId, data);
+                }
             } else { heartsErrorEl.textContent = 'Комната уже занята.'; return; }
-            sessionStorage.setItem('userRole', userRole);
+            sessionStorage.setItem('userRole', role);
             switchToHeartsView(binId, data);
         }
     }
@@ -204,35 +235,32 @@ document.addEventListener('DOMContentLoaded', () => {
         if (initialData) updateHeartsUI(initialData);
         startPolling(binId, updateHeartsUI);
     }
-
+    
     function updateHeartsUI(data) {
         if (!data || !data.user1 || !data.user2) return;
+        userRole = sessionStorage.getItem('userRole');
+        const partnerRole = userRole === 'user1' ? 'user2' : 'user1';
         
-        const myRole = sessionStorage.getItem('userRole');
-        const partnerRole = myRole === 'user1' ? 'user2' : 'user1';
-
-        const myHeart = myRole === 'user1' ? heart1El : heart2El;
-        const myMood = myRole === 'user1' ? mood1El : mood2El;
-        const partnerHeart = partnerRole === 'user1' ? heart1El : heart2El;
-        const partnerMood = partnerRole === 'user1' ? mood1El : mood2El;
-
-        myHeart.style.backgroundColor = data[myRole].color;
-        myMood.textContent = data[myRole].mood;
-        myHeart.classList.add('interactive');
-
-        partnerHeart.style.backgroundColor = data[partnerRole].color;
-        partnerMood.textContent = data[partnerRole].mood;
-        partnerHeart.classList.remove('interactive');
+        const myHeartWrapper = userRole === 'user1' ? heart1Wrapper : heart2Wrapper;
+        const partnerHeartWrapper = userRole === 'user1' ? heart2Wrapper : heart1Wrapper;
+        
+        myHeartWrapper.querySelector('.heart-svg').style.fill = data[userRole].color;
+        myHeartWrapper.querySelector('.mood-emoji').textContent = data[userRole].mood;
+        myHeartWrapper.classList.add('interactive');
+        
+        partnerHeartWrapper.querySelector('.heart-svg').style.fill = data[partnerRole].color;
+        partnerHeartWrapper.querySelector('.mood-emoji').textContent = data[partnerRole].mood;
+        partnerHeartWrapper.classList.remove('interactive');
     }
 
     async function handleMoodChange(e) {
-        const myRole = sessionStorage.getItem('userRole');
+        userRole = sessionStorage.getItem('userRole');
         const binId = sessionStorage.getItem('heartsBinId');
-        if (e.target.classList.contains('mood-option') && myRole && binId) {
+        if (e.target.classList.contains('mood-option') && userRole && binId) {
             const newMood = e.target.textContent;
             const data = await getBin(binId);
             if (data) {
-                data[myRole].mood = newMood;
+                data[userRole].mood = newMood;
                 await updateBin(binId, data);
                 updateHeartsUI(data);
             }
@@ -240,22 +268,28 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function handleColorChange(e) {
-        const myRole = sessionStorage.getItem('userRole');
+        userRole = sessionStorage.getItem('userRole');
         const binId = sessionStorage.getItem('heartsBinId');
-        if (e.target.classList.contains('color-dot') && myRole && binId) {
+        if (e.target.classList.contains('color-dot') && userRole && binId) {
             const newColor = e.target.dataset.color;
             const data = await getBin(binId);
             if (data) {
-                data[myRole].color = newColor;
+                data[userRole].color = newColor;
                 await updateBin(binId, data);
                 updateHeartsUI(data);
             }
         }
     }
 
+    // --- Логика игры ---
     async function createGame() {
         const initialData = {
-            messages: [{ sender: 'Game', text: 'Вы вдвоём оказались в мерцающем лесу... Перед вами две тропы: к поющему водопаду или в таинственную пещеру с тихой музыкой. Ваш выбор?'}]
+            step: 'start',
+            p1_id: userId,
+            p2_id: null,
+            p1_answer: null,
+            p2_answer: null,
+            history: []
         };
         const binId = await createBin(initialData, gameErrorEl);
         if (binId) switchToGameView(binId, initialData);
@@ -266,9 +300,15 @@ document.addEventListener('DOMContentLoaded', () => {
         const binId = joinGameInput.value.trim();
         if (!binId) return;
         const data = await getBin(binId, gameErrorEl);
-        if (data) switchToGameView(binId, data);
+        if (data) {
+            if (data.p1_id !== userId && data.p2_id === null) {
+                data.p2_id = userId;
+                await updateBin(binId, data);
+            }
+            switchToGameView(binId, data);
+        }
     }
-    
+
     function switchToGameView(binId, initialData) {
         sessionStorage.setItem('gameBinId', binId);
         gameConnectScreen.classList.add('hidden');
@@ -279,75 +319,89 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     function updateGameUI(data) {
-        const messages = data.messages || [];
-        if (chatWindow.children.length === messages.length) return;
+        if (!data) return;
+        const currentStepData = gameStory[data.step];
+        if (!currentStepData) return;
+
+        const myRole = (userId === data.p1_id) ? 'p1' : 'p2';
+        const myAnswer = data[`${myRole}_answer`];
+
+        gameStoryText.textContent = currentStepData.text;
+        gameResultsText.textContent = '';
         
-        chatWindow.innerHTML = '';
-        messages.forEach(msg => {
-            const wrapper = document.createElement('div');
-            wrapper.className = 'message-wrapper';
-            const messageEl = document.createElement('div');
-            messageEl.className = 'message';
-            messageEl.textContent = msg.text;
+        if (currentStepData.isEnd) {
+            gameOptions.innerHTML = '';
+            gameWaitingText.classList.add('hidden');
+            const restartBtn = document.createElement('button');
+            restartBtn.textContent = 'Начать заново';
+            restartBtn.className = 'action-button orange';
+            restartBtn.onclick = () => {
+                gameConnectScreen.classList.remove('hidden');
+                gameChatScreen.classList.add('hidden');
+                sessionStorage.removeItem('gameBinId');
+                clearInterval(pollingInterval);
+            };
+            gameOptions.appendChild(restartBtn);
+            return;
+        }
 
-            if (msg.sender === 'Game') wrapper.classList.add('game');
-            else if (msg.sender === userId) wrapper.classList.add('user');
-            else wrapper.classList.add('partner');
-            
-            messageEl.classList.add(wrapper.classList[1]);
-            wrapper.appendChild(messageEl);
-            chatWindow.appendChild(wrapper);
-        });
-        chatWindow.scrollTop = chatWindow.scrollHeight;
-    }
-
-    async function sendMessage(e) {
-        e.preventDefault();
-        const text = chatInput.value.trim();
-        if (!text || sendBtn.disabled) return;
-
-        sendBtn.disabled = true;
-        chatInput.value = '';
-
-        const binId = sessionStorage.getItem('gameBinId');
-        const data = await getBin(binId);
-        if (!data) { sendBtn.disabled = false; return; }
-
-        const newMessage = { sender: userId, text, timestamp: new Date().toISOString() };
-        data.messages.push(newMessage);
-        await updateBin(binId, data);
-        updateGameUI(data);
-
-        triggerGameMaster(data.messages);
-    }
-
-    async function triggerGameMaster(messages) {
-        const chatHistory = messages.slice(-6).map(m => `${m.sender === 'Game' ? 'Мастер Игры' : 'Игрок'}: ${m.text}`).join('\n');
-        const prompt = `Ты — таинственный и романтичный Гейм Мастер в текстовой игре для влюбленной пары. Их цель — вместе преодолевать испытания. Твой стиль — короткий, поэтичный, загадочный. Не давай прямых ответов, а создавай атмосферу и ставь перед ними выбор или описывай последствия их действий. Основываясь на истории чата, напиши следующее короткое сообщение (2-3 предложения) от лица Мастера Игры.\n\nИСТОРИЯ:\n${chatHistory}\n\nТВОЙ ОТВЕТ:`;
-
-        try {
-            const response = await fetch(geminiApiUrl, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+        if (myAnswer !== null) {
+            gameOptions.innerHTML = '';
+            gameWaitingText.classList.remove('hidden');
+        } else {
+            gameWaitingText.classList.add('hidden');
+            gameOptions.innerHTML = '';
+            currentStepData.options.forEach((optionText, index) => {
+                const btn = document.createElement('button');
+                btn.className = 'game-option-btn';
+                btn.textContent = optionText;
+                btn.dataset.choiceIndex = index;
+                gameOptions.appendChild(btn);
             });
-            if (!response.ok) throw new Error('Ошибка ответа от ИИ');
-
-            const result = await response.json();
-            const gameResponse = result.candidates[0].content.parts[0].text;
-            const gameMessage = { sender: 'Game', text: gameResponse, timestamp: new Date().toISOString() };
-            
-            const currentData = await getBin(sessionStorage.getItem('gameBinId'));
-            if(currentData) {
-                currentData.messages.push(gameMessage);
-                await updateBin(sessionStorage.getItem('gameBinId'), currentData);
-            }
-        } catch (error) {
-            console.error("Ошибка Gemini:", error);
-        } finally {
-            sendBtn.disabled = false;
+        }
+        
+        // Показываем результаты, если оба ответили
+        if (data.p1_answer !== null && data.p2_answer !== null) {
+            const p1ChoiceText = currentStepData.options[data.p1_answer];
+            const p2ChoiceText = currentStepData.options[data.p2_answer];
+            gameResultsText.innerHTML = `Он выбрал: <em>"${p1ChoiceText}"</em><br>Она выбрала: <em>"${p2ChoiceText}"</em>`;
         }
     }
+
+    async function handleGameChoice(e) {
+        if (!e.target.classList.contains('game-option-btn')) return;
+        
+        const choiceIndex = parseInt(e.target.dataset.choiceIndex, 10);
+        const binId = sessionStorage.getItem('gameBinId');
+        const data = await getBin(binId);
+        if (!data) return;
+
+        const myRole = (userId === data.p1_id) ? 'p1' : 'p2';
+        data[`${myRole}_answer`] = choiceIndex;
+        
+        // Если оба игрока ответили, вычисляем следующий шаг
+        if (data.p1_answer !== null && data.p2_answer !== null) {
+            const currentStepLogic = gameStory[data.step].logic;
+            const nextStep = currentStepLogic(data.p1_answer, data.p2_answer);
+            
+            // Сохраняем историю и переходим на новый шаг
+            data.history.push({ step: data.step, p1: data.p1_answer, p2: data.p2_answer });
+            data.step = nextStep;
+            data.p1_answer = null;
+            data.p2_answer = null;
+        }
+
+        await updateBin(binId, data);
+        updateGameUI(data);
+    }
     
+    function restoreSession() {
+        const heartsBinId = sessionStorage.getItem('heartsBinId');
+        if (heartsBinId) switchToHeartsView(heartsBinId);
+        
+        const gameBinId = sessionStorage.getItem('gameBinId');
+        if (gameBinId) switchToGameView(gameBinId);
+    }
+
     initialize();
 });
