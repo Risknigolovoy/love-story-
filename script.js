@@ -2,11 +2,12 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Глобальные переменные ---
     const apiKey = '$2a$10$EIdkYYUdFQ6kRpT0OobuU.YjsENOEz9Un3ljT398QIIR0nRqXmFEq';
     const binApiUrl = 'https://api.jsonbin.io/v3/b';
-    const geminiApiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=`; // API ключ для Gemini не нужен в этой среде
+    const geminiApiKey = ''; // API ключ для Gemini не нужен в этой среде
+    const geminiApiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiApiKey}`;
 
-    let gameBinId = null;
-    let heartsBinId = null;
-    let pollingInterval = null;
+    let gamePollingInterval = null;
+    let heartsPollingInterval = null;
+    let complimentInterval = null;
     let userRole = null; // 'user1' или 'user2'
 
     const userId = sessionStorage.getItem('userId') || `user_${Math.random().toString(36).substring(2, 9)}`;
@@ -31,6 +32,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const moodSelector = document.getElementById('mood-selector');
     const colorPalette = document.getElementById('color-palette');
     const heartsRoomIdEl = document.getElementById('hearts-room-id');
+    const complimentTextEl = document.getElementById('compliment-text');
 
     // Вкладка Игра
     const gameConnectScreen = document.getElementById('game-connect-screen');
@@ -44,10 +46,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const chatForm = document.getElementById('chat-form');
     const chatInput = document.getElementById('chat-input');
     const sendBtn = document.getElementById('send-btn');
+    
+    // МАССИВ КОМПЛИМЕНТОВ
+    const lovePhrases = [ "Я люблю тебя больше, чем слова могут выразить.", "Каждый день я скучаю по тебе всё сильнее.", "Я боюсь потерять тебя, ты – мой мир.", "Прости, если моя любовь неидеальна. Я стараюсь.", "Даже на расстоянии, моё сердце всегда с тобой.", "Ты – первая мысль утром и последняя перед сном. Люблю.", "Скучаю по твоему смеху, он как музыка для меня.", "Мой самый большой страх – это мир, в котором нет тебя.", "Я люблю тебя не так, как ты заслуживаешь, а так, как умею – всем сердцем.", "Километры между нами ничего не значат. Я скучаю.", "Моя любовь к тебе – это единственное, в чём я уверен на 100%.", "Без тебя дни такие пустые. Скучаю ужасно.", "Пожалуйста, никогда не уходи. Я боюсь этой тишины.", "Прости за все моменты, когда я был неправ. Я люблю тебя.", "Расстояние учит меня ценить каждую секунду с тобой.", "Ты делаешь меня лучше. Я люблю тебя за это.", "Скучаю по твоим объятиям, в них я чувствовал себя дома.", "Я боюсь представить свою жизнь без твоей улыбки.", "Моя любовь к тебе растёт с каждым днём, даже если я этого не показываю.", "Мы далеко, но наши сердца бьются в унисон. Скучаю.", "Люблю тебя до луны и обратно.", "Каждая песня о любви теперь напоминает о тебе. Скучаю.", "Ты мой якорь в этом мире. Боюсь остаться без тебя.", "Прости, что иногда причиняю боль. Мои намерения всегда чисты.", "Я считаю дни до нашей встречи. Очень скучаю." ];
 
     // --- Инициализация ---
     function initialize() {
-        // Анимация загрузки
         setTimeout(() => {
             loader.classList.add('hidden');
             app.classList.remove('hidden');
@@ -55,28 +59,27 @@ document.addEventListener('DOMContentLoaded', () => {
 
         setupEventListeners();
         populateColorPalette();
+        startComplimentCycle();
     }
 
     // --- Настройка обработчиков событий ---
     function setupEventListeners() {
         navButtons.forEach(button => button.addEventListener('click', switchView));
         
-        // Сердца
         createHeartsRoomBtn.addEventListener('click', createHeartsRoom);
         joinHeartsRoomForm.addEventListener('submit', joinHeartsRoom);
         moodSelector.addEventListener('click', handleMoodChange);
         colorPalette.addEventListener('click', handleColorChange);
 
-        // Игра
         createGameBtn.addEventListener('click', createGame);
         joinGameForm.addEventListener('submit', joinGame);
         chatForm.addEventListener('submit', sendMessage);
     }
 
-    // --- Логика переключения вкладок ---
     function switchView(e) {
-        // Останавливаем опрос при переключении
-        if (pollingInterval) clearInterval(pollingInterval);
+        clearInterval(heartsPollingInterval);
+        clearInterval(gamePollingInterval);
+        clearInterval(complimentInterval);
 
         const targetViewId = e.target.dataset.view;
         document.querySelectorAll('.view').forEach(view => view.classList.remove('active-view'));
@@ -84,46 +87,99 @@ document.addEventListener('DOMContentLoaded', () => {
         navButtons.forEach(btn => btn.classList.remove('active'));
         e.target.classList.add('active');
 
-        // Возобновляем опрос, если мы на активной вкладке с комнатой
-        if (targetViewId === 'hearts-view' && heartsBinId) {
-            startPolling(heartsBinId, updateHeartsUI);
-        } else if (targetViewId === 'game-view' && gameBinId) {
-            startPolling(gameBinId, updateGameUI);
+        if (targetViewId === 'hearts-view') {
+            startComplimentCycle();
+            if (sessionStorage.getItem('heartsBinId')) {
+                startPolling('heartsBinId', updateHeartsUI);
+            }
+        } else if (targetViewId === 'game-view' && sessionStorage.getItem('gameBinId')) {
+            startPolling('gameBinId', updateGameUI);
         }
     }
-
-    // --- Общая логика JSONbin и опроса ---
-    function startPolling(binId, updateFunction) {
-        if (pollingInterval) clearInterval(pollingInterval);
+    
+    // --- Логика авто-комплиментов ---
+    function startComplimentCycle() {
+        if (complimentInterval) clearInterval(complimentInterval);
         
-        const fetchData = async () => {
+        const showNextCompliment = () => {
+            complimentTextEl.style.opacity = 0;
+            setTimeout(() => {
+                const randomIndex = Math.floor(Math.random() * lovePhrases.length);
+                complimentTextEl.textContent = lovePhrases[randomIndex];
+                complimentTextEl.style.opacity = 1;
+            }, 500);
+        };
+        
+        showNextCompliment(); // Показать первый сразу
+        complimentInterval = setInterval(showNextCompliment, 8000); // Менять каждые 8 секунд
+    }
+    
+    // --- Общая логика JSONbin и опроса ---
+    function startPolling(binIdKey, updateFunction) {
+        const binId = sessionStorage.getItem(binIdKey);
+        if (!binId) return;
+
+        const intervalId = setInterval(async () => {
+            if (sessionStorage.getItem(binIdKey) !== binId) {
+                clearInterval(intervalId);
+                return;
+            }
             try {
                 const response = await fetch(`${binApiUrl}/${binId}/latest`, { headers: { 'X-Master-Key': apiKey } });
-                if (!response.ok) {
-                    console.error("Комната не найдена или ошибка сети, опрос остановлен.");
-                    clearInterval(pollingInterval);
-                    return;
-                }
+                if (!response.ok) throw new Error("Bin not found");
                 const data = await response.json();
                 updateFunction(data.record);
             } catch (error) {
-                console.error("Ошибка при получении данных:", error);
+                console.error("Polling error:", error);
+                clearInterval(intervalId);
             }
-        };
+        }, 3500);
 
-        fetchData();
-        pollingInterval = setInterval(fetchData, 3500); // Проверять каждые 3.5 секунды
+        if (binIdKey === 'heartsBinId') heartsPollingInterval = intervalId;
+        else gamePollingInterval = intervalId;
+        
+        // Первый вызов для мгновенной загрузки
+        (async () => {
+             const data = await getBin(binId);
+             if(data) updateFunction(data);
+        })();
     }
 
     async function updateBin(binId, data) {
+        return fetch(`${binApiUrl}/${binId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json', 'X-Master-Key': apiKey },
+            body: JSON.stringify(data)
+        });
+    }
+    
+    async function createBin(initialData, errorElement) {
         try {
-            await fetch(`${binApiUrl}/${binId}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json', 'X-Master-Key': apiKey },
-                body: JSON.stringify(data)
+            const response = await fetch(binApiUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-Master-Key': apiKey, 'X-Bin-Private': 'true'},
+                body: JSON.stringify(initialData)
             });
+            if (!response.ok) throw new Error(`Ошибка сети: ${response.statusText}`);
+            const result = await response.json();
+            errorElement.textContent = '';
+            return result.metadata.id;
         } catch (error) {
-            console.error("Ошибка обновления данных:", error);
+            errorElement.textContent = `Не удалось создать комнату: ${error.message}`;
+            return null;
+        }
+    }
+    
+    async function getBin(binId, errorElement) {
+        try {
+            const response = await fetch(`${binApiUrl}/${binId}/latest`, { headers: { 'X-Master-Key': apiKey } });
+            if (!response.ok) throw new Error('Комната не найдена.');
+            const data = await response.json();
+            if (errorElement) errorElement.textContent = '';
+            return data.record;
+        } catch (error) {
+            if (errorElement) errorElement.textContent = error.message;
+            return null;
         }
     }
 
@@ -148,6 +204,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const binId = await createBin(initialData, heartsErrorEl);
         if (binId) {
             userRole = 'user1';
+            sessionStorage.setItem('userRole', 'user1');
             switchToHeartsView(binId);
         }
     }
@@ -160,61 +217,73 @@ document.addEventListener('DOMContentLoaded', () => {
         
         const data = await getBin(binId, heartsErrorEl);
         if (data) {
-            // Определяем роль пользователя
             if (data.user1.id === userId) {
                 userRole = 'user1';
             } else if (data.user2.id === null || data.user2.id === userId) {
                 userRole = 'user2';
-                data.user2.id = userId; // Занимаем второй слот
+                data.user2.id = userId;
                 await updateBin(binId, data);
             } else {
                 heartsErrorEl.textContent = 'Комната уже занята.';
                 return;
             }
+            sessionStorage.setItem('userRole', userRole);
             switchToHeartsView(binId);
         }
     }
 
     function switchToHeartsView(binId) {
-        heartsBinId = binId;
+        sessionStorage.setItem('heartsBinId', binId);
         heartsConnectScreen.classList.add('hidden');
         heartsDisplayScreen.classList.remove('hidden');
         heartsRoomIdEl.textContent = binId;
-        startPolling(binId, updateHeartsUI);
+        startPolling('heartsBinId', updateHeartsUI);
     }
 
     function updateHeartsUI(data) {
         if (!data || !data.user1 || !data.user2) return;
         
-        // Обновляем Сердце 1
-        heart1El.style.backgroundColor = data.user1.color;
-        mood1El.textContent = data.user1.mood;
+        const myRole = sessionStorage.getItem('userRole');
+        const partnerRole = myRole === 'user1' ? 'user2' : 'user1';
 
-        // Обновляем Сердце 2
-        heart2El.style.backgroundColor = data.user2.color;
-        mood2El.textContent = data.user2.mood;
+        const myHeart = myRole === 'user1' ? heart1El : heart2El;
+        const myMood = myRole === 'user1' ? mood1El : mood2El;
+        const partnerHeart = partnerRole === 'user1' ? heart1El : heart2El;
+        const partnerMood = partnerRole === 'user1' ? mood1El : mood2El;
+
+        myHeart.style.backgroundColor = data[myRole].color;
+        myMood.textContent = data[myRole].mood;
+        myHeart.classList.add('interactive');
+
+        partnerHeart.style.backgroundColor = data[partnerRole].color;
+        partnerMood.textContent = data[partnerRole].mood;
+        partnerHeart.classList.remove('interactive');
     }
 
     async function handleMoodChange(e) {
-        if (e.target.classList.contains('mood-option') && userRole) {
+        const myRole = sessionStorage.getItem('userRole');
+        const binId = sessionStorage.getItem('heartsBinId');
+        if (e.target.classList.contains('mood-option') && myRole && binId) {
             const newMood = e.target.textContent;
-            const data = await getBin(heartsBinId, heartsErrorEl);
+            const data = await getBin(binId, heartsErrorEl);
             if (data) {
-                data[userRole].mood = newMood;
-                await updateBin(heartsBinId, data);
-                updateHeartsUI(data); // Мгновенное обновление для себя
+                data[myRole].mood = newMood;
+                await updateBin(binId, data);
+                updateHeartsUI(data);
             }
         }
     }
 
     async function handleColorChange(e) {
-        if (e.target.classList.contains('color-dot') && userRole) {
+        const myRole = sessionStorage.getItem('userRole');
+        const binId = sessionStorage.getItem('heartsBinId');
+        if (e.target.classList.contains('color-dot') && myRole && binId) {
             const newColor = e.target.dataset.color;
-            const data = await getBin(heartsBinId, heartsErrorEl);
+            const data = await getBin(binId, heartsErrorEl);
             if (data) {
-                data[userRole].color = newColor;
-                await updateBin(heartsBinId, data);
-                updateHeartsUI(data); // Мгновенное обновление для себя
+                data[myRole].color = newColor;
+                await updateBin(binId, data);
+                updateHeartsUI(data);
             }
         }
     }
@@ -241,20 +310,20 @@ document.addEventListener('DOMContentLoaded', () => {
         const data = await getBin(binId, gameErrorEl);
         if (data) switchToGameView(binId);
     }
-
+    
     function switchToGameView(binId) {
-        gameBinId = binId;
+        sessionStorage.setItem('gameBinId', binId);
         gameConnectScreen.classList.add('hidden');
         gameChatScreen.classList.remove('hidden');
         gameIdDisplay.textContent = binId;
-        startPolling(binId, updateGameUI);
+        startPolling('gameBinId', updateGameUI);
     }
-
+    
     function updateGameUI(data) {
         const messages = data.messages || [];
         const lastMessageCount = chatWindow.children.length;
         if (messages.length === lastMessageCount) return;
-
+        
         chatWindow.innerHTML = '';
         messages.forEach(msg => {
             const wrapper = document.createElement('div');
@@ -283,18 +352,15 @@ document.addEventListener('DOMContentLoaded', () => {
         const tempMessage = text;
         chatInput.value = '';
 
-        const data = await getBin(gameBinId, gameErrorEl);
-        if (!data) {
-            sendBtn.disabled = false;
-            return;
-        }
+        const binId = sessionStorage.getItem('gameBinId');
+        const data = await getBin(binId, gameErrorEl);
+        if (!data) { sendBtn.disabled = false; return; }
 
         const newMessage = { sender: userId, text: tempMessage, timestamp: new Date().toISOString() };
         data.messages.push(newMessage);
-        await updateBin(gameBinId, data);
-        updateGameUI(data); // Мгновенное обновление для себя
+        await updateBin(binId, data);
+        updateGameUI(data);
 
-        // Вызов Гейм Мастера (Gemini)
         triggerGameMaster(data.messages);
     }
 
@@ -315,62 +381,28 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const result = await response.json();
             const gameResponse = result.candidates[0].content.parts[0].text;
-
             const gameMessage = { sender: 'Game', text: gameResponse, timestamp: new Date().toISOString() };
             
-            const currentData = await getBin(gameBinId, gameErrorEl);
+            const currentData = await getBin(sessionStorage.getItem('gameBinId'));
             if(currentData) {
                 currentData.messages.push(gameMessage);
-                await updateBin(gameBinId, currentData);
-                updateGameUI(currentData);
+                await updateBin(sessionStorage.getItem('gameBinId'), currentData);
             }
-
         } catch (error) {
             console.error("Ошибка Gemini:", error);
         } finally {
             sendBtn.disabled = false;
         }
     }
-
-    // --- Хелперы ---
-    async function createBin(initialData, errorElement) {
-        try {
-            const response = await fetch(binApiUrl, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'X-Master-Key': apiKey },
-                body: JSON.stringify(initialData)
-            });
-            if (!response.ok) throw new Error(`Ошибка сети: ${response.statusText}`);
-            const result = await response.json();
-            errorElement.textContent = '';
-            return result.metadata.id;
-        } catch (error) {
-            errorElement.textContent = `Не удалось создать комнату: ${error.message}`;
-            return null;
-        }
+    
+    // Восстановление состояния сессии при перезагрузке страницы
+    if (sessionStorage.getItem('heartsBinId')) {
+        userRole = sessionStorage.getItem('userRole');
+        switchToHeartsView(sessionStorage.getItem('heartsBinId'));
+    }
+     if (sessionStorage.getItem('gameBinId')) {
+        switchToGameView(sessionStorage.getItem('gameBinId'));
     }
 
-    async function getBin(binId, errorElement) {
-        try {
-            const response = await fetch(`${binApiUrl}/${binId}/latest`, { headers: { 'X-Master-Key': apiKey } });
-            if (!response.ok) throw new Error('Комната не найдена.');
-            const data = await response.json();
-            errorElement.textContent = '';
-            return data.record;
-        } catch (error) {
-            errorElement.textContent = error.message;
-            return null;
-        }
-    }
-
-    function copyGameId() {
-        const id = gameIdDisplay.textContent;
-        navigator.clipboard.writeText(id).then(() => {
-            document.getElementById('copy-success').textContent = 'Скопировано!';
-            setTimeout(() => document.getElementById('copy-success').textContent = '', 2000);
-        });
-    }
-
-    // --- Запуск приложения ---
     initialize();
 });
