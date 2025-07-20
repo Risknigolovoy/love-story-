@@ -9,42 +9,32 @@
 }
 
 html, body {
-    height: 100%;
-    margin: 0;
+    height: 100%; margin: 0;
     font-family: 'Inter', 'Arial', sans-serif;
-    background-color: var(--bg-color);
-    color: var(--text-color);
+    background-color: var(--bg-color); color: var(--text-color);
 }
 
 body {
-    display: flex;
-    justify-content: center;
-    align-items: flex-start; /* Разрешаем контенту начинаться сверху */
-    overflow-y: auto;
-    padding: 20px 10px; /* Добавляем отступы */
+    display: flex; justify-content: center; align-items: flex-start;
+    overflow-y: auto; padding: 20px 10px;
 }
 
 .stars {
     position: fixed; top: 0; left: 0; width: 100%; height: 100%;
     background: url('https://www.transparenttextures.com/patterns/stardust.png');
-    animation: move-back 200s linear infinite;
-    z-index: -1;
+    animation: move-back 200s linear infinite; z-index: -1;
 }
 
-@keyframes move-back {
-    from { background-position: 0 0; } to { background-position: -10000px 5000px; }
-}
+@keyframes move-back { from { background-position: 0 0; } to { background-position: -10000px 5000px; } }
 
 /* --- ЭКРАН ЗАГРУЗКИ --- */
 .loader {
     position: fixed; top: 0; left: 0; width: 100%; height: 100%;
     background-color: var(--bg-color);
     display: flex; flex-direction: column; justify-content: center; align-items: center;
-    z-index: 100;
-    transition: opacity 1s ease-out;
+    z-index: 100; transition: opacity 1s ease-out;
 }
 .loader.hidden { opacity: 0; pointer-events: none; }
-
 .loader-hearts { display: flex; }
 .loader-heart {
     width: 50px; height: 50px; background-color: var(--pink-main);
@@ -58,40 +48,26 @@ body {
 .loader-heart:before { top: -25px; left: 0; }
 .loader-heart:after { top: 0; left: 25px; }
 .loader-heart:nth-child(2) { animation-delay: -0.3s; }
-
-@keyframes loader-pulse {
-    0%, 100% { transform: scale(1) rotate(-45deg); }
-    50% { transform: scale(1.1) rotate(-45deg); }
-}
-
-.loader-text {
-    margin-top: 50px; font-size: 1.2rem; color: var(--purple-light);
-    animation: fade-in-text 2s infinite alternate;
-}
-@keyframes fade-in-text {
-    from { opacity: 0.5; } to { opacity: 1; }
-}
+@keyframes loader-pulse { 0%, 100% { transform: scale(1) rotate(-45deg); } 50% { transform: scale(1.1) rotate(-45deg); } }
+.loader-text { margin-top: 50px; font-size: 1.2rem; color: var(--purple-light); animation: fade-in-text 2s infinite alternate; }
+@keyframes fade-in-text { from { opacity: 0.5; } to { opacity: 1; } }
 
 /* --- Основное приложение --- */
 .app-container {
-    width: 100%; max-width: 420px;
-    min-height: 85vh;
+    width: 100%; max-width: 420px; min-height: 85vh;
     background: var(--container-bg); backdrop-filter: blur(10px);
     border-radius: 20px; box-shadow: 0 8px 32px 0 rgba(138, 43, 226, 0.37);
     display: flex; flex-direction: column;
 }
 .app-container.hidden { display: none; }
-
 .app-nav { display: flex; padding: 8px; background: rgba(0, 0, 0, 0.2); }
 .app-content { flex-grow: 1; overflow-y: auto; padding: 16px; }
-
 .nav-button {
     flex: 1; padding: 12px; border: none; background: transparent;
     color: var(--text-color); font-size: 1rem; border-radius: 12px;
     cursor: pointer; transition: all 0.3s ease;
 }
 .nav-button.active { background: var(--purple-main); box-shadow: 0 0 15px var(--purple-main); }
-
 .view { display: none; flex-direction: column; align-items: center; }
 .view.active-view { display: flex; }
 
@@ -99,53 +75,30 @@ body {
 .hearts-container { display: flex; justify-content: space-around; width: 100%; margin: 20px 0; }
 .heart-wrapper { text-align: center; }
 .heart-wrapper p { font-size: 1.2rem; color: var(--purple-light); }
-
-/* УЛУЧШЕННЫЕ СЕРДЦА */
+.heart-svg-wrapper { position: relative; width: 90px; height: 90px; margin: 10px auto; }
 .heart-svg {
-    width: 80px; height: 80px; /* Уменьшили размер */
-    background: var(--pink-main);
-    position: relative; transform: rotate(-45deg); margin: 10px auto;
-    animation: pulse-subtle 3s infinite ease-in-out; /* Более плавная анимация */
-    transition: background-color 0.5s ease, transform 0.3s ease;
-    display: flex; justify-content: center; align-items: center;
-    border-radius: 5px; /* Слегка скругляем для красоты */
+    width: 100%; height: 100%; fill: var(--pink-main);
+    animation: pulse-subtle 3s infinite ease-in-out;
+    transition: fill 0.5s ease, transform 0.3s ease;
 }
-.heart-svg.interactive:hover { transform: scale(1.1) rotate(-45deg); cursor: pointer; }
-
-.heart-svg:before, .heart-svg:after {
-    content: ''; position: absolute; width: 80px; height: 80px;
-    border-radius: 50%; background-color: inherit;
-}
-.heart-svg:before { top: -40px; left: 0; }
-.heart-svg:after { top: 0, left: 40px; }
-
+.heart-svg-wrapper.interactive:hover .heart-svg { transform: scale(1.1); cursor: pointer; }
 .mood-emoji {
-    font-size: 38px; z-index: 1; transform: rotate(45deg);
-    text-shadow: 0 0 5px rgba(0,0,0,0.5);
+    position: absolute; top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 38px; text-shadow: 0 0 5px rgba(0,0,0,0.5);
 }
-
-@keyframes pulse-subtle {
-    0%, 100% { transform: scale(1) rotate(-45deg); }
-    50% { transform: scale(1.03) rotate(-45deg); }
-}
-
-/* КОМПЛИМЕНТЫ */
+@keyframes pulse-subtle { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.05); } }
 .compliment-text {
-    font-style: italic;
-    color: var(--purple-light);
-    margin: 15px;
-    min-height: 40px;
-    text-align: center;
+    font-style: italic; color: var(--purple-light);
+    margin: 15px; min-height: 40px; text-align: center;
     transition: opacity 0.5s ease-in-out;
 }
-
 .controls-wrapper { margin-top: 10px; width: 100%; }
 .controls-title { text-align: center; margin: 15px 0 10px; color: var(--purple-light); }
 .mood-selector { display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; }
 .mood-option {
     font-size: 24px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2);
-    border-radius: 50%; width: 50px; height: 50px; cursor: pointer;
-    transition: all 0.2s;
+    border-radius: 50%; width: 50px; height: 50px; cursor: pointer; transition: all 0.2s;
 }
 .mood-option:hover, .mood-option.active { background: var(--purple-main); transform: scale(1.1); }
 .color-palette { display: flex; justify-content: center; gap: 15px; }
@@ -172,27 +125,22 @@ body {
 }
 .error-message { margin-top: 12px; color: #ff5555; min-height: 20px; }
 #game-chat-screen { display: none; flex-direction: column; height: 100%; }
-.game-info { padding-bottom: 8px; border-bottom: 1px solid #444; }
-.game-id { color: var(--pink-main); font-weight: bold; cursor: pointer; }
-.copy-success { color: #4ade80; font-size: 0.8rem; margin-left: 8px; }
-.chat-window { flex-grow: 1; overflow-y: auto; padding: 12px 0; max-height: 40vh; }
-.chat-form { display: flex; gap: 8px; padding-top: 8px; border-top: 1px solid #444; }
-.chat-input {
-    flex-grow: 1; padding: 10px 15px; background: rgba(0,0,0,0.3);
-    border: 1px solid #555; border-radius: 20px; color: var(--text-color);
+.game-story-text { font-size: 1.1rem; line-height: 1.6; color: var(--purple-light); margin-bottom: 20px; }
+.game-options { display: flex; flex-direction: column; gap: 10px; width: 100%; }
+.game-option-btn {
+    padding: 12px; background: rgba(255,255,255,0.1); border: 1px solid var(--purple-main);
+    color: var(--text-color); border-radius: 8px; cursor: pointer; transition: background-color 0.3s;
 }
-.send-button {
-    background: var(--pink-main); border: none; border-radius: 50%;
-    width: 40px; height: 40px; color: white; font-size: 1.2rem; cursor: pointer;
+.game-option-btn:hover { background-color: var(--purple-main); }
+.game-option-btn:disabled { background-color: #555; color: #999; cursor: not-allowed; }
+.game-waiting-text { margin: 20px 0; font-style: italic; color: var(--purple-light); animation: fade-in-text 2s infinite alternate; }
+.game-results-text {
+    margin-top: 20px; padding-top: 20px; border-top: 1px solid #444;
+    font-size: 1rem; line-height: 1.5; text-align: left;
 }
-.send-button:disabled { background: #555; }
-.message-wrapper { display: flex; margin-bottom: 12px; }
-.message-wrapper.user { justify-content: flex-end; }
-.message-wrapper.partner { justify-content: flex-start; }
-.message-wrapper.game { justify-content: center; }
-.message {
-    padding: 8px 12px; border-radius: 16px; max-width: 80%; word-wrap: break-word;
+.action-button {
+    padding: 15px 30px; border-radius: 50px; border: none; color: #fff;
+    font-size: 1rem; font-weight: bold; cursor: pointer; transition: transform 0.2s, box-shadow 0.3s;
 }
-.message.user { background: #007bff; border-bottom-right-radius: 4px; }
-.message.partner { background: #444; border-bottom-left-radius: 4px; }
-.message.game { background: var(--purple-main); font-style: italic; text-align: center; }
+.action-button.orange { background: linear-gradient(45deg, #ff8c00, #ff4500); box-shadow: 0 4px 20px rgba(255, 140, 0, 0.5); }
+.action-button.purple { background: var(--purple-main); box-shadow: 0 4px 20px rgba(138, 43, 226, 0.5); }
