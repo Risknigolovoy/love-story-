@@ -171,7 +171,8 @@ body {
 .game-screen.hidden { display: none; }
 .game-title { font-size: 1.5rem; font-weight: bold; }
 .game-subtitle { margin-top: 8px; color: var(--purple-light); }
-#create-game-btn { margin-top: 32px; width: 100%; }
+#game-actions { width: 100%; }
+#create-game-btn { margin-bottom: 16px; width: 100%; }
 .divider { margin: 16px 0; color: #888; }
 .join-form { display: flex; flex-direction: column; gap: 8px; }
 .game-input {
@@ -185,7 +186,7 @@ body {
     font-size: 1rem;
     text-transform: uppercase;
 }
-.error-message { margin-top: 12px; color: #ff5555; }
+.error-message { margin-top: 12px; color: #ff5555; min-height: 20px; }
 
 /* Стили чата */
 #game-chat-screen { display: none; flex-direction: column; height: 100%; }
