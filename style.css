@@ -21,8 +21,7 @@ body {
     justify-content: center;
     align-items: flex-start; /* Разрешаем контенту начинаться сверху */
     overflow-y: auto;
-    padding-top: 20px; /* Добавляем отступ сверху */
-    padding-bottom: 20px;
+    padding: 20px 10px; /* Добавляем отступы */
 }
 
 .stars {
@@ -118,7 +117,7 @@ body {
     border-radius: 50%; background-color: inherit;
 }
 .heart-svg:before { top: -40px; left: 0; }
-.heart-svg:after { top: 0; left: 40px; }
+.heart-svg:after { top: 0, left: 40px; }
 
 .mood-emoji {
     font-size: 38px; z-index: 1; transform: rotate(45deg);
