@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Наш маленький мир</title>
+    <title>Наша Вселенная</title>
     <link rel="stylesheet" href="style.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Lobster&family=Marck+Script&family=Playfair+Display:ital@0;1&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Lobster&family=Marck+Script&family=Playfair+Display:ital@0;1&family=Roboto:wght@300;400&display=swap" rel="stylesheet">
 </head>
 <body>
 
@@ -17,7 +17,7 @@
     <div id="loader">
         <div class="heart-loader"></div>
         <div class="heart-loader"></div>
-        <p>Создаю наш маленький мир...</p>
+        <p>Расширяю нашу Вселенную...</p>
     </div>
 
     <div id="app" class="hidden">
@@ -42,22 +42,33 @@
             <nav class="tabs">
                 <button class="tab-link active" data-tab="hearts">Сердца</button>
                 <button class="tab-link" data-tab="game">Игра</button>
+                <button class="tab-link" data-tab="music">Музыка</button>
+                <button class="tab-link" data-tab="memories">Воспоминания</button>
             </nav>
 
             <div id="hearts-tab" class="tab-content active">
+                <div id="countdown-container" class="widget-box hidden">
+                    <h3>До нашей встречи:</h3>
+                    <div id="countdown-timer">0д 0ч 0м 0с</div>
+                    <button id="set-date-btn">Установить дату</button>
+                    <input type="date" id="date-picker" class="hidden">
+                </div>
+
                 <div class="hearts-container">
                     <div class="heart-wrapper" id="he-heart-wrapper">
                         <label>Он</label>
-                        <div class="heart" id="he-heart">
-                            <span class="emoji" id="he-emoji">❤️</span>
-                        </div>
+                        <div class="heart" id="he-heart"><span class="emoji" id="he-emoji">❤️</span></div>
                     </div>
+                    <div id="action-animation-container"></div>
                     <div class="heart-wrapper" id="she-heart-wrapper">
                         <label>Она</label>
-                        <div class="heart" id="she-heart">
-                           <span class="emoji" id="she-emoji">❤️</span>
-                        </div>
+                        <div class="heart" id="she-heart"><span class="emoji" id="she-emoji">❤️</span></div>
                     </div>
+                </div>
+                
+                <div class="touch-actions">
+                    <button id="send-kiss-btn">Поцелуй 💋</button>
+                    <button id="send-hug-btn">Объятие 🤗</button>
                 </div>
 
                 <div id="controls" class="hidden">
@@ -66,23 +77,74 @@
                     <div id="emoji-palette"></div>
                     <button id="confirm-choice-btn">Готово</button>
                 </div>
-
-                <div class="compliment-box">
-                    <p id="compliment-text">Я думаю о тебе...</p>
+                
+                <div id="qotd-container" class="widget-box">
+                    <h3>Вопрос дня:</h3>
+                    <p id="qotd-question">Загрузка вопроса...</p>
+                    <div id="qotd-answers-area">
+                        <div id="qotd-my-answer">
+                            <textarea id="my-answer-input" placeholder="Ваш ответ..."></textarea>
+                            <button id="submit-answer-btn">Ответить</button>
+                        </div>
+                        <div id="qotd-partner-answer" class="hidden">
+                            <p><strong>Ответ партнёра:</strong></p>
+                            <p id="partner-answer-text"></p>
+                        </div>
+                         <p id="qotd-status">Ожидание ответа партнёра...</p>
+                    </div>
                 </div>
             </div>
 
             <div id="game-tab" class="tab-content">
                 <div id="game-container">
-                    <p id="game-story">Добро пожаловать в наше приключение! Здесь начинается ваша общая история...</p>
-                    <div id="game-choices">
+                    <div id="game-header">
+                        <div id="inventory">
+                            <strong>Инвентарь:</strong> <span id="inventory-list">пусто</span>
                         </div>
+                        <div id="sync-score-container">
+                            <strong>Синхронность:</strong>
+                            <div class="progress-bar-container">
+                                <div id="sync-score-bar"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <p id="game-story">Добро пожаловать в наше приключение!</p>
+                    <div id="game-choices"></div>
+                    <div id="minigame-container"></div>
                     <p id="game-status"></p>
+                </div>
+            </div>
+
+            <div id="music-tab" class="tab-content">
+                <div class="widget-box">
+                    <h3>Общий плейлист</h3>
+                    <div id="player-container">
+                        <div id="youtube-player"></div>
+                    </div>
+                    <div id="playlist-controls">
+                        <input type="text" id="song-url-input" placeholder="Вставь ссылку на песню с YouTube">
+                        <button id="add-song-btn">Добавить</button>
+                    </div>
+                    <ul id="playlist-list"></ul>
+                </div>
+            </div>
+
+            <div id="memories-tab" class="tab-content">
+                <div class="widget-box">
+                    <h3>Баночка воспоминаний</h3>
+                    <div class="add-memory-form">
+                        <input type="text" id="image-url-input" placeholder="Вставь ССЫЛКУ на фото">
+                        <input type="text" id="image-desc-input" placeholder="Добавь описание">
+                        <button id="add-memory-btn">Добавить воспоминание</button>
+                    </div>
+                    <p class="small-info">Для добавления фото, загрузите его на любой хостинг (например, imgur.com) и вставьте сюда прямую ссылку на изображение.</p>
+                    <div id="memory-gallery"></div>
                 </div>
             </div>
         </div>
     </div>
-
+    
+    <script src="https://www.youtube.com/iframe_api"></script>
     <script src="script.js"></script>
 </body>
 </html>
