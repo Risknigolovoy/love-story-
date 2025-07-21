@@ -1,407 +1,422 @@
 document.addEventListener('DOMContentLoaded', () => {
-    // --- Глобальные переменные ---
-    const apiKey = '$2a$10$EIdkYYUdFQ6kRpT0OobuU.YjsENOEz9Un3ljT398QIIR0nRqXmFEq';
-    const binApiUrl = 'https://api.jsonbin.io/v3/b';
-    
-    let pollingInterval = null;
-    let userRole = null;
+    // --- КОНФИГУРАЦИЯ И КОНСТАНТЫ ---
+    const X_MASTER_KEY = '$2a$10$EIdkYYUdFQ6kRpT0OobuU.YjsENOEz9Un3ljT398QIIR0nRqXmFEq';
+    const JSONBIN_URL = 'https://api.jsonbin.io/v3/b';
+    const POLLING_INTERVAL = 3000; // 3 секунды
+    const COMPLIMENT_INTERVAL = 9000; // 9 секунд
 
-    const userId = sessionStorage.getItem('userId') || `user_${Math.random().toString(36).substring(2, 9)}`;
-    sessionStorage.setItem('userId', userId);
-
-    // --- Элементы DOM ---
+    // --- DOM ЭЛЕМЕНТЫ ---
     const loader = document.getElementById('loader');
     const app = document.getElementById('app');
-    const navButtons = document.querySelectorAll('.nav-button');
-    
-    // Сердца
-    const heartsConnectScreen = document.getElementById('hearts-connect-screen');
-    const heartsDisplayScreen = document.getElementById('hearts-display-screen');
-    const createHeartsRoomBtn = document.getElementById('create-hearts-room-btn');
-    const joinHeartsRoomForm = document.getElementById('join-hearts-room-form');
-    const joinHeartsRoomInput = document.getElementById('join-hearts-room-input');
-    const heartsErrorEl = document.getElementById('hearts-error');
-    const heart1Wrapper = document.getElementById('heart1');
-    const heart2Wrapper = document.getElementById('heart2');
-    const mood1El = document.getElementById('mood1');
-    const mood2El = document.getElementById('mood2');
-    const moodSelector = document.getElementById('mood-selector');
+    const roomScreen = document.getElementById('room-screen');
+    const mainContent = document.getElementById('main-content');
+    const createRoomBtn = document.getElementById('create-room-btn');
+    const roomIdInput = document.getElementById('room-id-input');
+    const joinAsHeBtn = document.getElementById('join-as-he-btn');
+    const joinAsSheBtn = document.getElementById('join-as-she-btn');
+    const roomCodeDisplay = document.querySelector('.room-code-display');
+    const roomCodeEl = document.getElementById('room-code');
+
+    const heHeart = document.getElementById('he-heart');
+    const sheHeart = document.getElementById('she-heart');
+    const heEmoji = document.getElementById('he-emoji');
+    const sheEmoji = document.getElementById('she-emoji');
+
+    const controls = document.getElementById('controls');
     const colorPalette = document.getElementById('color-palette');
-    const heartsRoomIdEl = document.getElementById('hearts-room-id');
-    const complimentTextEl = document.getElementById('compliment-text');
+    const emojiPalette = document.getElementById('emoji-palette');
+    const confirmChoiceBtn = document.getElementById('confirm-choice-btn');
 
-    // Игра
-    const gameConnectScreen = document.getElementById('game-connect-screen');
-    const gameChatScreen = document.getElementById('game-chat-screen');
-    const createGameBtn = document.getElementById('create-game-btn');
-    const joinGameForm = document.getElementById('join-game-form');
-    const joinGameInput = document.getElementById('join-game-input');
-    const gameErrorEl = document.getElementById('game-error');
-    const gameIdDisplay = document.getElementById('game-id-display');
-    const gameStoryText = document.getElementById('game-story-text');
-    const gameOptions = document.getElementById('game-options');
-    const gameWaitingText = document.getElementById('game-waiting-text');
-    const gameResultsText = document.getElementById('game-results-text');
+    const complimentText = document.getElementById('compliment-text');
+    const tabs = document.querySelectorAll('.tab-link');
+    const tabContents = document.querySelectorAll('.tab-content');
 
-    // --- Инициализация ---
-    function initialize() {
-        setTimeout(() => {
-            loader.classList.add('hidden');
-            app.classList.remove('hidden');
-        }, 5000);
+    const gameStory = document.getElementById('game-story');
+    const gameChoices = document.getElementById('game-choices');
+    const gameStatus = document.getElementById('game-status');
 
-        setupEventListeners();
-        populateControls();
-        startComplimentCycle();
-        restoreSession();
-    }
-    
-    // --- Логика игры ---
-    const gameStory = {
-        'start': {
-            text: 'Вы вдвоём оказались в мерцающем лесу. Воздух пахнет озоном и ночными цветами. Перед вами тропа расходится: одна ведет к поющему водопаду, другая — к таинственной пещере, из которой доносится тихая музыка.',
-            options: ['Идти к водопаду', 'Исследовать пещеру'],
-            logic: (p1, p2) => (p1 === p2) ? (p1 === 0 ? 'waterfall' : 'cave') : 'split_paths'
-        },
-        'waterfall': {
-            text: 'У водопада вы находите два светящихся камня. Один тёплый, как летнее солнце, другой — прохладный, как лунный свет. Вы можете взять только по одному.',
-            options: ['Взять тёплый камень', 'Взять холодный камень'],
-            logic: (p1, p2) => (p1 === p2) ? (p1 === 0 ? 'warm_ending' : 'cold_ending') : 'mix_ending'
-        },
-        'cave': {
-            text: 'В пещере стены усыпаны кристаллами. В центре стоит пьедестал с двумя шкатулками: одна из тёмного дерева, другая — из светлого перламутра.',
-            options: ['Открыть тёмную шкатулку', 'Открыть светлую шкатулку'],
-            logic: (p1, p2) => (p1 === p2) ? (p1 === 0 ? 'dark_ending' : 'bright_ending') : 'mix_ending'
-        },
-        'split_paths': {
-            text: 'Вы решили разделиться. Блуждая в одиночестве, вы понимаете, что магия этого места заключается в единстве. Тропинки снова сводят вас вместе, давая второй шанс. Перед вами снова водопад и пещера.',
-            options: ['К водопаду, на этот раз вместе', 'В пещеру, держась за руки'],
-            logic: (p1, p2) => (p1 === 0 || p2 === 0) ? 'waterfall' : 'cave'
-        },
-        'warm_ending': { text: 'Когда ваши тёплые камни соприкоснулись, они вспыхнули ярким светом, и лес вокруг вас расцвёл тысячами огней. Вы обрели дар согревать друг друга даже на расстоянии. Это ваша общая победа, построенная на тепле и доверии.', isEnd: true },
-        'cold_ending': { text: 'Холодные камни в ваших руках засияли чистым звёздным светом, открывая вам тайные тропы Вселенной. Вы научились понимать друг друга без слов, читая мысли в сиянии звёзд. Это ваша победа мудрости и спокойствия.', isEnd: true },
-        'dark_ending': { text: 'В тёмных шкатулках вы нашли древние артефакты, дарующие защиту от любых невзгод. Вы поняли, что вместе можете преодолеть любую тьму, ведь ваша любовь — самый надёжный щит. Это победа вашей смелости.', isEnd: true },
-        'bright_ending': { text: 'Светлые шкатулки наполнили пещеру музыкой и светом, показав вам картины вашего счастливого будущего. Вы обрели дар видеть лучшее друг в друге и вдохновлять на мечты. Это победа вашей надежды.', isEnd: true },
-        'mix_ending': { text: 'Ваши разные выборы создали нечто новое. Камни и шкатулки слились в один артефакт, который пульсирует и теплом, и холодом, и светом, и тенью. Вы поняли, что ваша сила — в принятии различий друг друга, создавая уникальную гармонию. Это ваша главная победа — победа любви, которая объединяет противоположности.', isEnd: true }
+    // --- СОСТОЯНИЕ ПРИЛОЖЕНИЯ ---
+    let state = {
+        binId: null,
+        userRole: null, // 'he' или 'she'
+        pollingTimer: null,
+        complimentTimer: null,
+        localData: null,
     };
 
-    // ... (остальной код будет ниже)
-    
-    // --- Настройка и общие функции ---
-    function setupEventListeners() {
-        navButtons.forEach(button => button.addEventListener('click', switchView));
-        createHeartsRoomBtn.addEventListener('click', createHeartsRoom);
-        joinHeartsRoomForm.addEventListener('submit', joinHeartsRoom);
-        moodSelector.addEventListener('click', handleMoodChange);
-        colorPalette.addEventListener('click', handleColorChange);
-        createGameBtn.addEventListener('click', createGame);
-        joinGameForm.addEventListener('submit', joinGame);
-        gameOptions.addEventListener('click', handleGameChoice);
-    }
+    // --- СПИСКИ ДАННЫХ ---
+    const compliments = [
+        "Я люблю тебя до луны и обратно.", "Скучаю по твоему голосу.", "Ты - моё самое большое приключение.",
+        "Каждая секунда без тебя - вечность.", "Мы справимся с любым расстоянием.", "Думаю о тебе прямо сейчас.",
+        "Ты делаешь мой мир ярче.", "Скорей бы тебя обнять.", "Ты моё солнышко в пасмурный день.",
+        "Спасибо, что ты есть у меня.", "Ты — причина моей улыбки.", "Наши сердца бьются в унисон."
+    ];
+    const colors = ['#ff4757', '#ff6b81', '#ffa502', '#ff6348', '#1e90ff', '#4169e1', '#32ff7e', '#7bed9f', '#9b59b6', '#8e44ad'];
+    const emojis = ['❤️', '💖', '🥰', '😍', '😘', '🤗', '🌟', '✨', '🔥', '🔐'];
 
-    function switchView(e) {
-        clearInterval(pollingInterval);
-        const targetViewId = e.target.dataset.view;
-        document.querySelectorAll('.view').forEach(view => view.classList.remove('active-view'));
-        document.getElementById(targetViewId).classList.add('active-view');
-        navButtons.forEach(btn => btn.classList.remove('active'));
-        e.target.classList.add('active');
-        
-        const heartsBinId = sessionStorage.getItem('heartsBinId');
-        const gameBinId = sessionStorage.getItem('gameBinId');
+    // --- ИГРОВЫЕ ДАННЫЕ (Сюжет) ---
+    const gameData = {
+        'start': {
+            text: "Вы стоите на пороге Зачарованного Леса. Лунный свет пробивается сквозь кроны деревьев, освещая две тропы. Одна уходит в тёмную чащу, другая — к мерцающему озеру. Куда вы пойдёте?",
+            choices: [{ text: 'В тёмную чащу', id: 'a' }, { text: 'К мерцающему озеру', id: 'b' }],
+            outcomes: {
+                'a_a': 'deep_forest', 'b_b': 'lake_shore', 'a_b': 'mixed_path_1', 'b_a': 'mixed_path_1'
+            }
+        },
+        'deep_forest': {
+            text: "Вы вместе шагнули в чащу. Впереди вы видите светлячков, танцующих вокруг древнего дуба, и слышите тихую мелодию. Что будете делать?",
+            choices: [{ text: 'Пойти к дубу', id: 'a' }, { text: 'Попытаться найти источник мелодии', id: 'b' }],
+            outcomes: {
+                'a_a': 'oak_success', 'b_b': 'music_success', 'a_b': 'oak_fail', 'b_a': 'oak_fail'
+            }
+        },
+        'lake_shore': {
+            text: "Берег озера усыпан светящимися камнями. Лодка мягко качается у кромки воды. Вы можете взять лодку или пойти вдоль берега.",
+            choices: [{ text: 'Взять лодку и плыть к центру озера', id: 'a' }, { text: 'Идти вдоль берега', id: 'b' }],
+            outcomes: {
+                'a_a': 'boat_success', 'b_b': 'shore_walk_success', 'a_b': 'boat_fail', 'b_a': 'boat_fail'
+            }
+        },
+        'mixed_path_1': {
+            text: "Ваши пути разошлись, но вскоре снова сошлись у старого каменного моста. Мост выглядит хрупким. Вы решите перейти его вместе или будете искать обходной путь?",
+            choices: [{ text: 'Рискнуть и перейти мост', id: 'a' }, { text: 'Искать обходной путь', id: 'b' }],
+            outcomes: {
+                'a_a': 'bridge_success', 'b_b': 'detour_success', 'a_b': 'bridge_fail', 'b_a': 'bridge_fail'
+            }
+        },
+        // Концовки
+        'oak_success': { text: "Подойдя к дубу, вы видите, что светлячки образовали два сердца. Они сливаются в одно, озаряя вас тёплым светом. Вы чувствуете, как ваша связь стала ещё крепче. (Хорошая концовка)", choices: [], outcomes: {} },
+        'music_success': { text: "Мелодия привела вас на поляну, где духи леса играют на невидимых арфах. Они дарят вам волшебный цветок, символ вечной любви. (Хорошая концовка)", choices: [], outcomes: {} },
+        'oak_fail': { text: "Ваши разные решения создали диссонанс. Светлячки разлетелись, и в лесу стало темно и холодно. Вы заблудились, но вы всё ещё вместе, чтобы найти выход. (Нейтральная концовка)", choices: [], outcomes: {} },
+        'boat_success': { text: "В центре озера вы видите отражение двух летящих комет, которые встречаются в одной точке — прямо как вы. Это знак судьбы. (Хорошая концовка)", choices: [], outcomes: {} },
+        'shore_walk_success': { text: "Идя вдоль берега, вы находите пещеру, стены которой усыпаны кристаллами, показывающими ваше счастливое будущее. (Хорошая концовка)", choices: [], outcomes: {} },
+        'boat_fail': { text: "Из-за нерешительности вы упустили лодку, которую унесло течением. Придётся искать другой путь, но главное, что вы вместе. (Нейтральная концовка)", choices: [], outcomes: {} },
+        'bridge_success': { text: "Держась за руки, вы аккуратно переходите мост. Ваше доверие друг к другу сделало его прочным. На другой стороне вас ждёт цветущий сад. (Хорошая концовка)", choices: [], outcomes: {} },
+        'detour_success': { text: "Обходной путь оказался длинным, но живописным. Вы провели это время, разговаривая и наслаждаясь компанией друг друга, что сблизило вас ещё больше. (Хорошая концовка)", choices: [], outcomes: {} },
+        'bridge_fail': { text: "Ваши сомнения сделали мост ещё более хрупким. Он обрушился, и вам пришлось вернуться. Это испытание, но вы готовы пройти его вместе. (Плохая концовка)", choices: [], outcomes: {} },
 
-        if (targetViewId === 'hearts-view' && heartsBinId) startPolling(heartsBinId, updateHeartsUI);
-        else if (targetViewId === 'game-view' && gameBinId) startPolling(gameBinId, updateGameUI);
-    }
+    };
 
-    function startPolling(binId, updateFunction) {
-        clearInterval(pollingInterval);
-        const fetchData = async () => {
-            const data = await getBin(binId);
-            if (data) updateFunction(data);
+    // --- ФУНКЦИИ API (JSONBIN.IO) ---
+    async function apiCall(url, method = 'GET', body = null) {
+        const headers = {
+            'Content-Type': 'application/json',
+            'X-Master-Key': X_MASTER_KEY,
+            'X-Access-Key': '$2a$10$EIdkYYUdFQ6kRpT0OobuU.YjsENOEz9Un3ljT398QIIR0nRqXmFEq' // Для новых бинов иногда требуется
         };
-        fetchData();
-        pollingInterval = setInterval(fetchData, 3500);
+        try {
+            const options = { method, headers };
+            if (body) {
+                options.body = JSON.stringify(body);
+            }
+            const response = await fetch(url, options);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            // Для PUT запросов jsonbin возвращает 200 OK с данными, для POST - 200 OK с метаданными
+             if (method === 'GET' || method === 'PUT') {
+                 return await response.json();
+             }
+             // Для POST нам нужен ID из ответа
+             const data = await response.json();
+             return method === 'POST' ? data.metadata.id : data;
+
+        } catch (error) {
+            console.error("API call failed:", error);
+            alert("Ошибка сети или сервера. Попробуйте снова.");
+            return null;
+        }
+    }
+
+    async function createBin() {
+        const initialData = {
+            hearts: {
+                he: { color: '#4169e1', emoji: '❤️' },
+                she: { color: '#ff69b4', emoji: '❤️' }
+            },
+            game: {
+                node: 'start',
+                choices: { he: null, she: null }
+            }
+        };
+        const result = await apiCall(JSONBIN_URL, 'POST', initialData);
+        return result; // Должен вернуть ID бина
+    }
+
+    async function readBin(binId) {
+        const data = await apiCall(`${JSONBIN_URL}/${binId}/latest`);
+        return data ? data.record : null;
     }
 
     async function updateBin(binId, data) {
-        return fetch(`${binApiUrl}/${binId}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json', 'X-Master-Key': apiKey },
-            body: JSON.stringify(data)
-        });
+        return await apiCall(`${JSONBIN_URL}/${binId}`, 'PUT', data);
     }
 
-    async function createBin(initialData, errorElement) {
-        errorElement.textContent = 'Создаю...';
-        try {
-            const response = await fetch(binApiUrl, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'X-Master-Key': apiKey, 'X-Bin-Private': 'true' },
-                body: JSON.stringify(initialData)
-            });
-            if (!response.ok) throw new Error(`Ошибка сети: ${response.statusText}`);
-            const result = await response.json();
-            errorElement.textContent = '';
-            return result.metadata.id;
-        } catch (error) {
-            errorElement.textContent = `Ошибка: ${error.message}`;
-            return null;
-        }
-    }
+    // --- ОСНОВНАЯ ЛОГИКА ---
 
-    async function getBin(binId, errorElement) {
-        try {
-            const response = await fetch(`${binApiUrl}/${binId}/latest`, { headers: { 'X-Master-Key': apiKey } });
-            if (!response.ok) throw new Error('Комната не найдена.');
-            const data = await response.json();
-            if (errorElement) errorElement.textContent = '';
-            return data.record;
-        } catch (error) {
-            if (errorElement) errorElement.textContent = error.message;
-            return null;
-        }
+    function init() {
+        // Симуляция загрузки
+        setTimeout(() => {
+            loader.classList.add('fade-out');
+            app.classList.remove('hidden');
+            setTimeout(() => loader.classList.add('hidden'), 1000);
+        }, 5000); // 5 секунд
+
+        setupEventListeners();
+        populatePalettes();
     }
     
-    // --- Логика сердец и комплиментов ---
-    function startComplimentCycle() {
-        if (complimentInterval) clearInterval(complimentInterval);
-        const showNextCompliment = () => {
-            complimentTextEl.style.opacity = 0;
-            setTimeout(() => {
-                complimentTextEl.textContent = lovePhrases[Math.floor(Math.random() * lovePhrases.length)];
-                complimentTextEl.style.opacity = 1;
-            }, 500);
-        };
-        showNextCompliment();
-        complimentInterval = setInterval(showNextCompliment, 8000);
-    }
-    
-    function populateControls() {
-        const colors = ['#ff7a7a', '#a27aff', '#7affb8', '#f5ff7a', '#7ad7ff', '#ffc0cb', '#ffffff'];
-        colors.forEach(color => {
-            const dot = document.createElement('div');
-            dot.className = 'color-dot';
-            dot.style.backgroundColor = color;
-            dot.dataset.color = color;
-            colorPalette.appendChild(dot);
+    function setupEventListeners() {
+        createRoomBtn.addEventListener('click', handleCreateRoom);
+        joinAsHeBtn.addEventListener('click', () => handleJoinRoom('he'));
+        joinAsSheBtn.addEventListener('click', () => handleJoinRoom('she'));
+        
+        heHeart.addEventListener('click', () => openControls('he'));
+        sheHeart.addEventListener('click', () => openControls('she'));
+        confirmChoiceBtn.addEventListener('click', handleConfirmChoice);
+        
+        tabs.forEach(tab => {
+            tab.addEventListener('click', () => switchTab(tab.dataset.tab));
         });
-        const moods = ['❤️', '😊', '🥰', '😔', '🔥', '😴'];
-        moods.forEach(mood => {
-            const btn = document.createElement('button');
-            btn.className = 'mood-option';
-            btn.textContent = mood;
-            moodSelector.appendChild(btn);
-        });
+        
+        roomCodeEl.addEventListener('click', () => navigator.clipboard.writeText(state.binId));
     }
 
-    async function createHeartsRoom() {
-        const initialData = {
-            user1: { id: userId, color: '#ff7a7a', mood: '❤️' },
-            user2: { id: null, color: '#a27aff', mood: '❤️' }
-        };
-        const binId = await createBin(initialData, heartsErrorEl);
+    // Логика комнат
+    async function handleCreateRoom() {
+        createRoomBtn.disabled = true;
+        createRoomBtn.textContent = 'Создание...';
+        const binId = await createBin();
         if (binId) {
-            sessionStorage.setItem('userRole', 'user1');
-            switchToHeartsView(binId, initialData);
+            state.binId = binId;
+            roomCodeEl.textContent = state.binId;
+            roomCodeDisplay.classList.remove('hidden');
+            alert(`Комната создана! Ваш код: ${state.binId}. Отправьте его партнёру. Вы автоматически войдёте как "Он".`);
+            await startSession(binId, 'he');
+        } else {
+            alert("Не удалось создать комнату.");
         }
+        createRoomBtn.disabled = false;
+        createRoomBtn.textContent = 'Создать новую комнату';
     }
 
-    async function joinHeartsRoom(e) {
-        e.preventDefault();
-        const binId = joinHeartsRoomInput.value.trim();
-        if (!binId) return;
-        const data = await getBin(binId, heartsErrorEl);
+    async function handleJoinRoom(role) {
+        const binId = roomIdInput.value.trim();
+        if (!binId) {
+            alert("Пожалуйста, введите код комнаты.");
+            return;
+        }
+        // Проверка существования бина
+        const data = await readBin(binId);
         if (data) {
-            let role = sessionStorage.getItem('userRole');
-            if (data.user1.id === userId) role = 'user1';
-            else if (data.user2.id === null || data.user2.id === userId) {
-                role = 'user2';
-                if (data.user2.id === null) {
-                    data.user2.id = userId;
-                    await updateBin(binId, data);
-                }
-            } else { heartsErrorEl.textContent = 'Комната уже занята.'; return; }
-            sessionStorage.setItem('userRole', role);
-            switchToHeartsView(binId, data);
+            await startSession(binId, role);
+        } else {
+            alert("Комната с таким кодом не найдена.");
         }
     }
 
-    function switchToHeartsView(binId, initialData) {
-        sessionStorage.setItem('heartsBinId', binId);
-        heartsConnectScreen.classList.add('hidden');
-        heartsDisplayScreen.classList.remove('hidden');
-        heartsRoomIdEl.textContent = binId;
-        if (initialData) updateHeartsUI(initialData);
-        startPolling(binId, updateHeartsUI);
+    async function startSession(binId, role) {
+        state.binId = binId;
+        state.userRole = role;
+        
+        roomScreen.classList.add('hidden');
+        mainContent.classList.remove('hidden');
+
+        await pollServer(); // Первый немедленный вызов
+        state.pollingTimer = setInterval(pollServer, POLLING_INTERVAL);
+        startComplimentCycle();
     }
     
-    function updateHeartsUI(data) {
-        if (!data || !data.user1 || !data.user2) return;
-        userRole = sessionStorage.getItem('userRole');
-        const partnerRole = userRole === 'user1' ? 'user2' : 'user1';
-        
-        const myHeartWrapper = userRole === 'user1' ? heart1Wrapper : heart2Wrapper;
-        const partnerHeartWrapper = userRole === 'user1' ? heart2Wrapper : heart1Wrapper;
-        
-        myHeartWrapper.querySelector('.heart-svg').style.fill = data[userRole].color;
-        myHeartWrapper.querySelector('.mood-emoji').textContent = data[userRole].mood;
-        myHeartWrapper.classList.add('interactive');
-        
-        partnerHeartWrapper.querySelector('.heart-svg').style.fill = data[partnerRole].color;
-        partnerHeartWrapper.querySelector('.mood-emoji').textContent = data[partnerRole].mood;
-        partnerHeartWrapper.classList.remove('interactive');
-    }
-
-    async function handleMoodChange(e) {
-        userRole = sessionStorage.getItem('userRole');
-        const binId = sessionStorage.getItem('heartsBinId');
-        if (e.target.classList.contains('mood-option') && userRole && binId) {
-            const newMood = e.target.textContent;
-            const data = await getBin(binId);
-            if (data) {
-                data[userRole].mood = newMood;
-                await updateBin(binId, data);
-                updateHeartsUI(data);
-            }
-        }
-    }
-
-    async function handleColorChange(e) {
-        userRole = sessionStorage.getItem('userRole');
-        const binId = sessionStorage.getItem('heartsBinId');
-        if (e.target.classList.contains('color-dot') && userRole && binId) {
-            const newColor = e.target.dataset.color;
-            const data = await getBin(binId);
-            if (data) {
-                data[userRole].color = newColor;
-                await updateBin(binId, data);
-                updateHeartsUI(data);
-            }
-        }
-    }
-
-    // --- Логика игры ---
-    async function createGame() {
-        const initialData = {
-            step: 'start',
-            p1_id: userId,
-            p2_id: null,
-            p1_answer: null,
-            p2_answer: null,
-            history: []
-        };
-        const binId = await createBin(initialData, gameErrorEl);
-        if (binId) switchToGameView(binId, initialData);
-    }
-
-    async function joinGame(e) {
-        e.preventDefault();
-        const binId = joinGameInput.value.trim();
-        if (!binId) return;
-        const data = await getBin(binId, gameErrorEl);
-        if (data) {
-            if (data.p1_id !== userId && data.p2_id === null) {
-                data.p2_id = userId;
-                await updateBin(binId, data);
-            }
-            switchToGameView(binId, data);
-        }
-    }
-
-    function switchToGameView(binId, initialData) {
-        sessionStorage.setItem('gameBinId', binId);
-        gameConnectScreen.classList.add('hidden');
-        gameChatScreen.classList.remove('hidden');
-        gameIdDisplay.textContent = binId;
-        if (initialData) updateGameUI(initialData);
-        startPolling(binId, updateGameUI);
-    }
-    
-    function updateGameUI(data) {
+    // Обновление UI
+    function updateUI(data) {
         if (!data) return;
-        const currentStepData = gameStory[data.step];
-        if (!currentStepData) return;
+        state.localData = data; // Сохраняем свежие данные локально
 
-        const myRole = (userId === data.p1_id) ? 'p1' : 'p2';
-        const myAnswer = data[`${myRole}_answer`];
+        // Обновляем сердца
+        heHeart.style.color = data.hearts.he.color;
+        heEmoji.textContent = data.hearts.he.emoji;
+        sheHeart.style.color = data.hearts.she.color;
+        sheEmoji.textContent = data.hearts.she.emoji;
 
-        gameStoryText.textContent = currentStepData.text;
-        gameResultsText.textContent = '';
+        // Обновляем игру
+        updateGameUI(data.game);
+    }
+    
+    function updateGameUI(game) {
+        const currentNode = gameData[game.node];
+        if (!currentNode) return;
         
-        if (currentStepData.isEnd) {
-            gameOptions.innerHTML = '';
-            gameWaitingText.classList.add('hidden');
-            const restartBtn = document.createElement('button');
-            restartBtn.textContent = 'Начать заново';
-            restartBtn.className = 'action-button orange';
-            restartBtn.onclick = () => {
-                gameConnectScreen.classList.remove('hidden');
-                gameChatScreen.classList.add('hidden');
-                sessionStorage.removeItem('gameBinId');
-                clearInterval(pollingInterval);
-            };
-            gameOptions.appendChild(restartBtn);
+        gameStory.textContent = currentNode.text;
+        
+        // Очищаем и генерируем кнопки выбора
+        gameChoices.innerHTML = '';
+        if (currentNode.choices.length > 0) {
+            currentNode.choices.forEach(choice => {
+                const button = document.createElement('button');
+                button.textContent = choice.text;
+                button.dataset.choice = choice.id;
+                button.addEventListener('click', () => handleGameChoice(choice.id));
+                gameChoices.appendChild(button);
+            });
+        }
+        
+        // Обновляем статус игры
+        const myChoice = game.choices[state.userRole];
+        const partnerRole = state.userRole === 'he' ? 'she' : 'he';
+        const partnerChoice = game.choices[partnerRole];
+
+        if (myChoice) {
+            // Если я уже выбрал
+            gameChoices.querySelectorAll('button').forEach(b => {
+                b.disabled = true; // Блокируем кнопки после выбора
+                if (b.dataset.choice === myChoice) b.classList.add('chosen');
+            });
+            gameStatus.textContent = partnerChoice ? 'Оба сделали выбор! Смотрим результат...' : 'Ожидание ответа партнёра...';
+        } else {
+             // Если я еще не выбрал
+            gameStatus.textContent = partnerChoice ? `Ваш партнёр (${partnerRole}) уже сделал свой выбор. Теперь ваша очередь!` : 'Сделайте свой выбор...';
+        }
+    }
+
+
+    // Логика сердец
+    function openControls(role) {
+        if (role !== state.userRole) {
+            alert("Вы можете изменять только своё сердце :)");
+            return;
+        }
+        controls.classList.remove('hidden');
+        controls.dataset.editing = role; // Сохраняем, чье сердце редактируем
+    }
+
+    async function handleConfirmChoice() {
+        const role = controls.dataset.editing;
+        const selectedColor = colorPalette.querySelector('.swatch-selected');
+        const selectedEmoji = emojiPalette.querySelector('.swatch-selected');
+
+        if (!selectedColor || !selectedEmoji) {
+            alert("Пожалуйста, выберите и цвет, и эмодзи.");
             return;
         }
 
-        if (myAnswer !== null) {
-            gameOptions.innerHTML = '';
-            gameWaitingText.classList.remove('hidden');
-        } else {
-            gameWaitingText.classList.add('hidden');
-            gameOptions.innerHTML = '';
-            currentStepData.options.forEach((optionText, index) => {
-                const btn = document.createElement('button');
-                btn.className = 'game-option-btn';
-                btn.textContent = optionText;
-                btn.dataset.choiceIndex = index;
-                gameOptions.appendChild(btn);
-            });
-        }
-        
-        // Показываем результаты, если оба ответили
-        if (data.p1_answer !== null && data.p2_answer !== null) {
-            const p1ChoiceText = currentStepData.options[data.p1_answer];
-            const p2ChoiceText = currentStepData.options[data.p2_answer];
-            gameResultsText.innerHTML = `Он выбрал: <em>"${p1ChoiceText}"</em><br>Она выбрала: <em>"${p2ChoiceText}"</em>`;
-        }
-    }
+        const newData = JSON.parse(JSON.stringify(state.localData)); // Глубокая копия
+        newData.hearts[role].color = selectedColor.dataset.color;
+        newData.hearts[role].emoji = selectedEmoji.dataset.emoji;
 
-    async function handleGameChoice(e) {
-        if (!e.target.classList.contains('game-option-btn')) return;
-        
-        const choiceIndex = parseInt(e.target.dataset.choiceIndex, 10);
-        const binId = sessionStorage.getItem('gameBinId');
-        const data = await getBin(binId);
-        if (!data) return;
-
-        const myRole = (userId === data.p1_id) ? 'p1' : 'p2';
-        data[`${myRole}_answer`] = choiceIndex;
-        
-        // Если оба игрока ответили, вычисляем следующий шаг
-        if (data.p1_answer !== null && data.p2_answer !== null) {
-            const currentStepLogic = gameStory[data.step].logic;
-            const nextStep = currentStepLogic(data.p1_answer, data.p2_answer);
-            
-            // Сохраняем историю и переходим на новый шаг
-            data.history.push({ step: data.step, p1: data.p1_answer, p2: data.p2_answer });
-            data.step = nextStep;
-            data.p1_answer = null;
-            data.p2_answer = null;
-        }
-
-        await updateBin(binId, data);
-        updateGameUI(data);
+        controls.classList.add('hidden');
+        updateUI(newData); // Мгновенное локальное обновление
+        await updateBin(state.binId, newData);
     }
     
-    function restoreSession() {
-        const heartsBinId = sessionStorage.getItem('heartsBinId');
-        if (heartsBinId) switchToHeartsView(heartsBinId);
-        
-        const gameBinId = sessionStorage.getItem('gameBinId');
-        if (gameBinId) switchToGameView(gameBinId);
+    function populatePalettes() {
+        colors.forEach(color => {
+            const swatch = document.createElement('div');
+            swatch.className = 'color-swatch';
+            swatch.style.backgroundColor = color;
+            swatch.dataset.color = color;
+            swatch.addEventListener('click', () => selectSwatch(swatch, 'color'));
+            colorPalette.appendChild(swatch);
+        });
+        emojis.forEach(emoji => {
+            const swatch = document.createElement('div');
+            swatch.className = 'emoji-swatch';
+            swatch.textContent = emoji;
+            swatch.dataset.emoji = emoji;
+            swatch.addEventListener('click', () => selectSwatch(swatch, 'emoji'));
+            emojiPalette.appendChild(swatch);
+        });
+    }
+    
+    function selectSwatch(swatch, type) {
+        const palette = type === 'color' ? colorPalette : emojiPalette;
+        palette.querySelectorAll('.swatch-selected').forEach(s => s.classList.remove('swatch-selected'));
+        swatch.classList.add('swatch-selected');
     }
 
-    initialize();
+    // Логика игры
+    async function handleGameChoice(choiceId) {
+        // Немедленно обновляем локальные данные и отправляем на сервер
+        const newData = JSON.parse(JSON.stringify(state.localData));
+        newData.game.choices[state.userRole] = choiceId;
+        
+        updateGameUI(newData.game); // Локальное обновление UI для отображения ожидания
+        
+        // Отправляем наш выбор на сервер
+        const serverData = await updateBin(state.binId, newData);
+        
+        // Проверяем, сделал ли партнер выбор ПОСЛЕ нашего обновления
+        if(serverData) {
+            const partnerRole = state.userRole === 'he' ? 'she' : 'he';
+            if (serverData.record.game.choices[partnerRole]) {
+                 // Если да, значит, мы были вторыми. Мы отвечаем за переход на следующий узел.
+                 await advanceGame(serverData.record);
+            }
+        }
+    }
+    
+    async function advanceGame(data) {
+        const choices = data.game.choices;
+        const currentNode = gameData[data.game.node];
+        
+        // Формируем ключ для результата, например, 'a_b'
+        const outcomeKey = `${choices.he}_${choices.she}`;
+        const nextNodeId = currentNode.outcomes[outcomeKey];
+        
+        if (nextNodeId) {
+            // Готовим новый стейт для следующего раунда
+            const nextStateData = {
+                ...data,
+                game: {
+                    node: nextNodeId,
+                    choices: { he: null, she: null } // Сбрасываем выборы
+                }
+            };
+             // Отправляем новый стейт на сервер. Все увидят его при следующем поллинге.
+            await updateBin(state.binId, nextStateData);
+        }
+    }
+
+
+    // Вспомогательные функции
+    function switchTab(tabId) {
+        tabs.forEach(tab => tab.classList.remove('active'));
+        tabContents.forEach(content => content.classList.remove('active'));
+        document.querySelector(`[data-tab="${tabId}"]`).classList.add('active');
+        document.getElementById(`${tabId}-tab`).classList.add('active');
+    }
+
+    function startComplimentCycle() {
+        complimentText.textContent = compliments[Math.floor(Math.random() * compliments.length)];
+        state.complimentTimer = setInterval(() => {
+            complimentText.classList.add('fade-out');
+            setTimeout(() => {
+                let newCompliment = compliments[Math.floor(Math.random() * compliments.length)];
+                while (newCompliment === complimentText.textContent) {
+                     newCompliment = compliments[Math.floor(Math.random() * compliments.length)];
+                }
+                complimentText.textContent = newCompliment;
+                complimentText.classList.remove('fade-out');
+            }, 1000);
+        }, COMPLIMENT_INTERVAL);
+    }
+
+    async function pollServer() {
+        if (!state.binId) return;
+        const data = await readBin(state.binId);
+        if (data) {
+            // Проверяем, нужно ли обновить UI (сравниваем с локальной копией)
+            if (JSON.stringify(data) !== JSON.stringify(state.localData)) {
+                updateUI(data);
+
+                // Проверяем, не нужно ли нам, как первому игроку, инициировать переход
+                const { he, she } = data.game.choices;
+                if (he && she) {
+                    await advanceGame(data);
+                }
+            }
+        }
+    }
+
+    // --- ЗАПУСК ---
+    init();
 });
