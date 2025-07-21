@@ -17,7 +17,7 @@
     <div id="loader">
         <div class="heart-loader"></div>
         <div class="heart-loader"></div>
-        <p>Соединяю наши миры...</p>
+        <p>Настраиваю нашу связь...</p>
     </div>
 
     <div id="app" class="hidden">
@@ -37,18 +37,10 @@
             <nav class="tabs">
                 <button class="tab-link active" data-tab="hearts">Сердца</button>
                 <button class="tab-link" data-tab="game">Игра</button>
-                <button class="tab-link" data-tab="music">Музыка</button>
-                <button class="tab-link" data-tab="memories">Воспоминания</button>
+                <button class="tab-link" data-tab="history">История</button>
             </nav>
 
             <div id="hearts-tab" class="tab-content active">
-                <div id="countdown-container" class="widget-box hidden">
-                    <h3>До нашей встречи:</h3>
-                    <div id="countdown-timer">0д 0ч 0м 0с</div>
-                    <button id="set-date-btn">Установить дату</button>
-                    <input type="date" id="date-picker" class="hidden">
-                </div>
-
                 <div class="hearts-container">
                     <div class="heart-wrapper" id="he-heart-wrapper">
                         <label>Он</label>
@@ -73,6 +65,10 @@
                     <button id="confirm-choice-btn">Готово</button>
                 </div>
                 
+                <div class="compliment-box">
+                    <p id="compliment-text">Я думаю о тебе...</p>
+                </div>
+
                 <div id="qotd-container" class="widget-box">
                     <h3>Вопрос дня:</h3>
                     <p id="qotd-question">Загрузка вопроса...</p>
@@ -93,53 +89,34 @@
             <div id="game-tab" class="tab-content">
                 <div id="game-container">
                     <div id="game-header">
-                        <div id="inventory">
-                            <strong>Инвентарь:</strong> <span id="inventory-list">пусто</span>
-                        </div>
                         <div id="sync-score-container">
                             <strong>Синхронность:</strong>
                             <div class="progress-bar-container">
                                 <div id="sync-score-bar"></div>
                             </div>
                         </div>
+                        <div id="inventory">
+                            <strong>Инвентарь:</strong> <span id="inventory-list">пусто</span>
+                        </div>
                     </div>
-                    <p id="game-story">Добро пожаловать в наше приключение!</p>
+                    <p id="game-story-intro">Ваше приключение начинается! Уровень синхронности будет меняться в зависимости от ваших совместных решений.</p>
+                    <p id="game-story"></p>
                     <div id="game-choices"></div>
-                    <div id="minigame-container"></div>
                     <p id="game-status"></p>
                 </div>
             </div>
 
-            <div id="music-tab" class="tab-content">
+            <div id="history-tab" class="tab-content">
                 <div class="widget-box">
-                    <h3>Общий плейлист</h3>
-                    <div id="player-container">
-                        <div id="youtube-player"></div>
+                    <h3>История наших ответов</h3>
+                    <div id="history-list">
+                        <p>Здесь будут появляться ваши ответы на "Вопрос дня".</p>
                     </div>
-                    <div id="playlist-controls">
-                        <input type="text" id="song-url-input" placeholder="Вставь ссылку на песню с YouTube">
-                        <button id="add-song-btn">Добавить</button>
-                    </div>
-                    <ul id="playlist-list"></ul>
-                </div>
-            </div>
-
-            <div id="memories-tab" class="tab-content">
-                <div class="widget-box">
-                    <h3>Баночка воспоминаний</h3>
-                    <div class="add-memory-form">
-                        <input type="text" id="image-url-input" placeholder="Вставь ССЫЛКУ на фото">
-                        <input type="text" id="image-desc-input" placeholder="Добавь описание">
-                        <button id="add-memory-btn">Добавить воспоминание</button>
-                    </div>
-                    <p class="small-info">Для добавления фото, загрузите его на любой хостинг (например, imgur.com) и вставьте сюда прямую ссылку на изображение.</p>
-                    <div id="memory-gallery"></div>
                 </div>
             </div>
         </div>
     </div>
     
-    <script src="https://www.youtube.com/iframe_api"></script>
     <script src="script.js"></script>
 </body>
 </html>
