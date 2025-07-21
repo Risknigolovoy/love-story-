@@ -134,7 +134,19 @@ body {
     margin-bottom: 10px;
     color: #fff;
 }
-input[type="text"], input[type="date"], textarea {
+.login-form {
+    margin-top: 25px;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+#password-input {
+    font-size: 1.2em;
+}
+#login-btn {
+    width: 100%;
+}
+input[type="text"], input[type="password"], input[type="date"], textarea {
     width: 100%;
     padding: 12px;
     border-radius: 8px;
@@ -164,11 +176,6 @@ button:hover {
     transform: translateY(-2px);
     box-shadow: 0 10px 20px rgba(0,0,0,0.2);
 }
-.join-section { margin-top: 25px; border-top: 1px solid rgba(216, 186, 255, 0.2); padding-top: 25px; }
-.join-buttons { display: flex; gap: 10px; }
-.join-buttons button { flex-grow: 1; }
-.room-code-display { margin-top: 20px; background: rgba(0,0,0,0.3); padding: 10px; border-radius: 5px; }
-#room-code { color: #fff; font-weight: bold; cursor: pointer; text-decoration: underline; }
 
 /* Основной контент и табы */
 .tabs { display: flex; justify-content: center; margin-bottom: 30px; background: rgba(0,0,0,0.3); border-radius: 10px; padding: 5px; flex-wrap: wrap; }
@@ -206,7 +213,6 @@ button:hover {
 .emoji-swatch { font-size: 28px; display: flex; justify-content: center; align-items: center; background: rgba(255,255,255,0.1); }
 .swatch-selected { border-color: #fff; transform: scale(1.1); }
 
-#qotd-container { /* ... стили из предыдущей версии ... */ }
 #qotd-question { font-family: var(--romantic-font); font-size: 1.5em; min-height: 40px; }
 #qotd-partner-answer { background: rgba(0,0,0,0.2); padding: 15px; border-radius: 8px; margin-top: 15px; text-align: left; }
 #qotd-status { font-family: var(--romantic-font); color: var(--glow-color); margin-top: 15px; }
