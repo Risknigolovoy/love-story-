@@ -2,121 +2,143 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Наша Вселенная</title>
     <link rel="stylesheet" href="style.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Lobster&family=Marck+Script&family=Playfair+Display:ital@0;1&family=Roboto:wght@300;400&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500&family=Playfair+Display:ital,wght@1,400;1,500&display=swap" rel="stylesheet">
+    <script src="script.js" defer></script>
 </head>
 <body>
 
-    <div class="stars"></div>
-    <div class="twinkling"></div>
-
-    <div id="loader">
-        <div class="heart-loader"></div>
-        <div class="heart-loader"></div>
-        <p>Настраиваю нашу связь...</p>
+    <!-- Экран загрузки -->
+    <div id="loader" class="loader-container">
+        <div class="stars-bg"></div>
+        <div class="hearts-container">
+            <div class="heart-loader"></div>
+            <div class="heart-loader"></div>
+        </div>
+        <p class="loader-text">Настраиваю нашу связь...</p>
     </div>
 
-    <div id="app" class="hidden">
-
-        <div id="room-screen">
-            <div class="room-container">
-                <h1>Наш уголок Вселенной</h1>
-                <p>Введите дату рождения партнёра, чтобы войти.</p>
-                <div class="login-form">
-                    <input type="text" id="login-code-input" placeholder="Код для входа">
-                    <button id="login-btn">Войти</button>
-                </div>
-            </div>
+    <!-- Экран входа -->
+    <div id="login-screen" class="login-container hidden">
+        <div class="stars-bg"></div>
+        <div class="login-box">
+            <h1>Наша Вселенная</h1>
+            <p>Введите ваш код для входа</p>
+            <input type="password" id="login-code" placeholder="••••••••">
+            <button id="login-button">Войти</button>
+            <p id="login-error" class="error-message hidden">Неверный код. Попробуйте снова.</p>
         </div>
+    </div>
 
-        <div id="main-content" class="hidden">
-            <nav class="tabs">
-                <button class="tab-link active" data-tab="hearts">Сердца</button>
-                <button class="tab-link" data-tab="game">Игра</button>
-                <button class="tab-link" data-tab="history">История</button>
-            </nav>
-
-            <div id="hearts-tab" class="tab-content active">
-                <div class="hearts-container">
+    <!-- Основное приложение -->
+    <div id="app" class="app-container hidden">
+        <div class="stars-bg"></div>
+        <audio id="background-music" src="https://assets.mixkit.co/music/preview/mixkit-just-a-little-spark-1045.mp3" loop></audio>
+        
+        <main id="main-content">
+            <!-- Вкладка 1: Сердца -->
+            <div id="tab-hearts" class="tab-content active">
+                <div class="hearts-interaction-area">
                     <div class="heart-wrapper" id="he-heart-wrapper">
-                        <label>Он</label>
-                        <div class="heart" id="he-heart"><span class="emoji" id="he-emoji">❤️</span></div>
+                        <div class="heart" id="he-heart"></div>
+                        <span>Он</span>
                     </div>
-                    <div id="action-animation-container"></div>
                     <div class="heart-wrapper" id="she-heart-wrapper">
-                        <label>Она</label>
-                        <div class="heart" id="she-heart"><span class="emoji" id="she-emoji">❤️</span></div>
+                        <div class="heart" id="she-heart"></div>
+                        <span>Она</span>
                     </div>
                 </div>
-                
-                <div class="touch-actions">
-                    <button id="send-kiss-btn">Поцелуй 💋</button>
-                    <button id="send-hug-btn">Объятие 🤗</button>
+                <div class="interaction-buttons">
+                    <button id="kiss-button">Поцелуй 💋</button>
+                    <button id="hug-button">Объятие 🤗</button>
                 </div>
-
-                <div id="controls" class="hidden">
-                    <p>Выбери свой цвет и настроение:</p>
-                    <div id="color-palette"></div>
-                    <div id="emoji-palette"></div>
-                    <button id="confirm-choice-btn">Готово</button>
-                </div>
-                
                 <div class="compliment-box">
-                    <p id="compliment-text">Я думаю о тебе...</p>
+                    <p id="compliment-text">Ты — моё самое большое счастье.</p>
                 </div>
+            </div>
 
-                <div id="qotd-container" class="widget-box">
-                    <h3>Вопрос дня:</h3>
-                    <p id="qotd-question">Загрузка вопроса...</p>
-                    <div id="qotd-answers-area">
-                        <div id="qotd-my-answer">
-                            <textarea id="my-answer-input" placeholder="Ваш ответ..."></textarea>
-                            <button id="submit-answer-btn">Ответить</button>
+            <!-- Вкладка 2: Вопрос дня и История -->
+            <div id="tab-question" class="tab-content">
+                <div class="question-day-container">
+                    <h2>Вопрос дня</h2>
+                    <p id="daily-question-text">Загрузка вопроса...</p>
+                    <div id="answer-section">
+                        <textarea id="user-answer" placeholder="Ваш ответ..."></textarea>
+                        <button id="submit-answer-button">Ответить</button>
+                    </div>
+                    <div id="waiting-partner" class="hidden">Ожидание ответа партнёра...</div>
+                    <div id="answers-display" class="hidden">
+                        <h3>Ваши ответы:</h3>
+                        <div class="answer-block">
+                            <p><strong>Он:</strong> <span id="he-answer-text"></span></p>
                         </div>
-                        <div id="qotd-partner-answer" class="hidden">
-                            <p><strong>Ответ партнёра:</strong></p>
-                            <p id="partner-answer-text"></p>
+                        <div class="answer-block">
+                            <p><strong>Она:</strong> <span id="she-answer-text"></span></p>
                         </div>
-                         <p id="qotd-status">Ожидание ответа партнёра...</p>
+                    </div>
+                </div>
+                <div class="history-container">
+                    <h3>История ответов</h3>
+                    <div id="answer-history" class="history-log">
+                        <!-- Записи истории будут добавляться сюда -->
                     </div>
                 </div>
             </div>
 
-            <div id="game-tab" class="tab-content">
-                <div id="game-container">
-                    <div id="game-header">
-                        <div id="sync-score-container">
-                            <strong>Синхронность:</strong>
-                            <div class="progress-bar-container">
-                                <div id="sync-score-bar"></div>
-                            </div>
-                        </div>
-                        <div id="inventory">
-                            <strong>Инвентарь:</strong> <span id="inventory-list">пусто</span>
-                        </div>
+            <!-- Вкладка 3: Текстовая игра -->
+            <div id="tab-game" class="tab-content">
+                 <div class="game-container">
+                    <h2>Тайны Затерянного Храма</h2>
+                    <div class="game-stats">
+                        <span>Синхронность: <span id="sync-scale">50</span>%</span>
+                        <span>Инвентарь: <span id="inventory">пусто</span></span>
                     </div>
-                    <p id="game-story-intro">Ваше приключение начинается! Уровень синхронности будет меняться в зависимости от ваших совместных решений.</p>
-                    <p id="game-story"></p>
-                    <div id="game-choices"></div>
-                    <p id="game-status"></p>
+                    <div id="game-story" class="game-story-text">Загрузка сюжета...</div>
+                    <div id="game-choices" class="game-choices"></div>
+                    <div id="game-waiting-message" class="hidden">Ожидание выбора партнёра...</div>
                 </div>
             </div>
 
-            <div id="history-tab" class="tab-content">
-                <div class="widget-box">
-                    <h3>История наших ответов</h3>
-                    <div id="history-list">
-                        <p>Здесь будут появляться ваши ответы на "Вопрос дня".</p>
+            <!-- Вкладка 4: Звёздная карта -->
+            <div id="tab-starmap" class="tab-content">
+                <div class="starmap-container">
+                    <h2>Звёздная Карта</h2>
+                    <p>Рисуйте созвездия вместе</p>
+                    <canvas id="star-canvas"></canvas>
+                    <div class="starmap-controls">
+                        <input type="color" id="star-color-picker" value="#FFFFFF">
+                        <button id="clear-canvas-button">Очистить</button>
                     </div>
                 </div>
             </div>
+        </main>
+
+        <!-- Навигация -->
+        <nav>
+            <button class="nav-button active" data-tab="hearts">❤️</button>
+            <button class="nav-button" data-tab="question">❓</button>
+            <button class="nav-button" data-tab="game">🎲</button>
+            <button class="nav-button" data-tab="starmap">✨</button>
+            <button id="sound-toggle" class="nav-button">🎵</button>
+        </nav>
+    </div>
+
+    <!-- Модальное окно для кастомизации сердца -->
+    <div id="heart-modal" class="modal-container hidden">
+        <div class="modal-content">
+            <h3>Настрой своё сердце</h3>
+            <div class="color-palette">
+                <!-- Цвета будут добавлены динамически -->
+            </div>
+            <div class="emoji-palette">
+                <!-- Эмодзи будут добавлены динамически -->
+            </div>
+            <button id="save-heart-changes">Готово</button>
         </div>
     </div>
-    
-    <script src="script.js"></script>
 </body>
 </html>
