@@ -1,329 +1,719 @@
 document.addEventListener('DOMContentLoaded', () => {
-    // --- КОНФИГУРАЦИЯ ---
-    const X_MASTER_KEY = '$2a$10$EIdkYYUdFQ6kRpT0OobuU.YjsENOEz9Un3ljT398QIIR0nRqXmFEq';
-    const JSONBIN_URL = 'https://api.jsonbin.io/v3/b';
-    const POLLING_INTERVAL = 3500;
-    const COMPLIMENT_INTERVAL = 9000;
-
-    const STATIC_BIN_ID = '687ebac9f7e7a370d1eba7fa'; 
-    const CODE_FOR_HE = '06112002'; // Её дата рождения для входа "Его"
-    const CODE_FOR_SHE = '18092000'; // Его дата рождения для входа "Её"
-    
-    // --- DOM ЭЛЕМЕНТЫ ---
-    const dom = {
-        loader: document.getElementById('loader'),
-        app: document.getElementById('app'),
-        roomScreen: document.getElementById('room-screen'),
-        mainContent: document.getElementById('main-content'),
-        loginCodeInput: document.getElementById('login-code-input'),
-        loginBtn: document.getElementById('login-btn'),
-        tabs: document.querySelectorAll('.tab-link'),
-        tabContents: document.querySelectorAll('.tab-content'),
-        heHeart: document.getElementById('he-heart'),
-        sheHeart: document.getElementById('she-heart'),
-        heEmoji: document.getElementById('he-emoji'),
-        sheEmoji: document.getElementById('she-emoji'),
-        controls: document.getElementById('controls'),
-        colorPalette: document.getElementById('color-palette'),
-        emojiPalette: document.getElementById('emoji-palette'),
-        confirmChoiceBtn: document.getElementById('confirm-choice-btn'),
-        complimentText: document.getElementById('compliment-text'),
-        qotdQuestion: document.getElementById('qotd-question'),
-        myAnswerInput: document.getElementById('my-answer-input'),
-        submitAnswerBtn: document.getElementById('submit-answer-btn'),
-        partnerAnswerDiv: document.getElementById('qotd-partner-answer'),
-        partnerAnswerText: document.getElementById('partner-answer-text'),
-        qotdStatus: document.getElementById('qotd-status'),
-        inventoryList: document.getElementById('inventory-list'),
-        syncScoreBar: document.getElementById('sync-score-bar'),
-        gameStory: document.getElementById('game-story'),
-        gameChoices: document.getElementById('game-choices'),
-        gameStatus: document.getElementById('game-status'),
-        historyList: document.getElementById('history-list'),
-        sendKissBtn: document.getElementById('send-kiss-btn'),
-        sendHugBtn: document.getElementById('send-hug-btn'),
-        animationContainer: document.getElementById('action-animation-container'),
+    // --- КОНФИГУРАЦИЯ И КОНСТАНТЫ ---
+    const BIN_ID = '687ebac9f7e7a370d1eba7fa';
+    const API_KEY = '$2a$10$EIdkYYUdFQ6kRpT0OobuU.YjsENOEz9Un3ljT398QIIR0nRqXmFEq';
+    const API_URL = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
+    const HEADERS = {
+        'Content-Type': 'application/json',
+        'X-Master-Key': API_KEY
     };
-    
+    const USER_CODES = {
+        '06112002': 'He',
+        '18092000': 'She'
+    };
+    const POLLING_INTERVAL = 3000; // 3 секунды для обновлений
+
     // --- ГЛОБАЛЬНОЕ СОСТОЯНИЕ ---
-    let state = { binId: null, userRole: null, pollingTimer: null, complimentTimer: null, localData: null, lastActionTimestamp: 0 };
-    
-    // --- ДАННЫЕ (Комплименты, Вопросы, Игра и т.д.) ---
-    const compliments = [ "Я люблю тебя до луны и обратно.", "Скучаю по твоему голосу.", "Ты - моё самое большое приключение.", "Каждая секунда без тебя - вечность.", "Мы справимся с любым расстоянием.", "Думаю о тебе прямо сейчас.", "Ты делаешь мой мир ярче.", "Скорей бы тебя обнять.", "Ты моё солнышко в пасмурный день.", "Спасибо, что ты есть у меня.", "Ты — причина моей улыбки.", "Наши сердца бьются в унисон." ];
-    const questions = [ "Какое твоё самое тёплое детское воспоминание?", "Если бы ты мог(ла) иметь любую суперсилу, какую бы ты выбрал(а)?", "Опиши идеальный для тебя день.", "Что заставляет тебя смеяться до слёз?", "Какое наше совместное воспоминание для тебя самое ценное?", "Куда бы ты хотел(а) отправиться со мной в путешествие?", "Чему ты научился(ась) за последний год?", "Какая песня всегда поднимает тебе настроение?" ];
-    const colors = ['#ff4757', '#ff6b81', '#ffa502', '#ff6348', '#1e90ff', '#4169e1', '#32ff7e', '#7bed9f', '#9b59b6', 'deeppink'];
-    const emojis = ['❤️', '💖', '🥰', '😍', '😘', '🤗', '🌟', '✨', '🔥', '🔐'];
-    const gameData = {
-        'start': { text: "Вы стоите на пороге Зачарованного Леса. Луна дарит вам 'Лунный камень'. Куда пойдёте?", choices: [{ text: 'В тёмную чащу', id: 'a' }, { text: 'К мерцающему озеру', id: 'b' }], onEnter: { addItem: 'Лунный камень' }, outcomes: { 'a_a': { to: 'deep_forest', sync: 10 }, 'b_b': { to: 'lake_shore', sync: 10 }, 'a_b': { to: 'mixed_path_1', sync: -10 }, 'b_a': { to: 'mixed_path_1', sync: -10 } } },
-        'deep_forest': { text: "В чаще вы находите сундук и светлячков у дуба. Что вы делаете?", choices: [{ text: 'Открыть сундук', id: 'a' }, { text: 'Пойти к дубу', id: 'b' }], outcomes: { 'a_a': { to: 'chest_open' }, 'b_b': { to: 'oak_success', sync: 15 }, 'a_b': { to: 'forest_fail' }, 'b_a': { to: 'forest_fail', sync: -5 } } },
-        'chest_open': { text: "В сундуке лежит 'Карта созвездий'.", choices: [{ text: 'Продолжить путь', id: 'a' }], onEnter: { addItem: 'Карта созвездий' }, outcomes: { 'a_a': { to: 'star_bridge' } } },
-        'lake_shore': { text: "У озера стоит лодка, а в воде что-то блестит.", choices: [{ text: 'Взять лодку', id: 'a' }, { text: 'Достать предмет из воды', id: 'b' }], outcomes: { 'a_a': { to: 'boat_success', sync: 5 }, 'b_b': { to: 'crystal_found', sync: 5 }, 'a_b': { to: 'lake_fail' }, 'b_a': { to: 'lake_fail', sync: -5 } } },
-        'crystal_found': { text: "Вы нашли 'Водный кристалл'!", choices: [{ text: 'Идти дальше', id: 'a' }], onEnter: { addItem: 'Водный кристалл' }, outcomes: { 'a_a': { to: 'star_bridge' } } },
-        'star_bridge': { text: "Перед вами пропасть. Нужна 'Карта созвездий' чтобы пройти.", choices: [{ text: 'Использовать карту', id: 'a', requiresItem: 'Карта созвездий' }, { text: 'Искать другой путь', id: 'b' }], outcomes: { 'a_a': { to: 'good_ending_moon' }, 'b_b': { to: 'bad_ending_lost' } } },
-        'good_ending_moon': { text: "Карта создала мост из звёзд! Вы перешли его, и ваша любовь стала частью вечности. (Прекрасная концовка)", choices: [] },
-        'bad_ending_lost': { text: "Вы заблудились, но вы всё ещё вместе. Главное приключение — найти выход рука об руку. (Плохая концовка)", choices: [] },
-    };
+    let currentUser = null;
+    let appData = null;
+    let pollingIntervalId = null;
+    let isUpdating = false; // Флаг для предотвращения гонки состояний
 
-    // --- ФУНКЦИИ-ПОМОЩНИКИ ---
-    function showScreen(screenName) {
-        dom.loader.classList.add('hidden');
-        dom.app.classList.add('hidden');
-        dom.roomScreen.classList.add('hidden');
-        dom.mainContent.classList.add('hidden');
+    // --- DOM ЭЛЕМЕНТЫ ---
+    const loader = document.getElementById('loader');
+    const loginScreen = document.getElementById('login-screen');
+    const appScreen = document.getElementById('app');
+    const loginButton = document.getElementById('login-button');
+    const loginCodeInput = document.getElementById('login-code');
+    const loginError = document.getElementById('login-error');
 
-        if (screenName === 'loader') dom.loader.classList.remove('hidden');
-        else if (screenName === 'room') { dom.app.classList.remove('hidden'); dom.roomScreen.classList.remove('hidden'); }
-        else if (screenName === 'main') { dom.app.classList.remove('hidden'); dom.mainContent.classList.remove('hidden'); }
+    // --- Инициализация приложения ---
+    function init() {
+        // Показать загрузчик на несколько секунд для атмосферы
+        setTimeout(() => {
+            loader.style.opacity = '0';
+            setTimeout(() => {
+                loader.classList.add('hidden');
+                loginScreen.classList.remove('hidden');
+                loginScreen.style.opacity = '1';
+            }, 500);
+        }, 5000);
+
+        loginButton.addEventListener('click', handleLogin);
+        loginCodeInput.addEventListener('keyup', (e) => {
+            if (e.key === 'Enter') handleLogin();
+        });
     }
 
-    function getInitialState() {
+    // --- ЛОГИКА ВХОДА ---
+    async function handleLogin() {
+        const code = loginCodeInput.value;
+        const user = USER_CODES[code];
+        if (user) {
+            currentUser = user;
+            loginError.classList.add('hidden');
+            await startApp();
+        } else {
+            loginError.classList.remove('hidden');
+        }
+    }
+
+    // --- ЗАПУСК ОСНОВНОГО ПРИЛОЖЕНИЯ ---
+    async function startApp() {
+        loginScreen.style.opacity = '0';
+        setTimeout(() => {
+            loginScreen.classList.add('hidden');
+            appScreen.classList.remove('hidden');
+            appScreen.style.opacity = '1';
+        }, 500);
+
+        await fetchAndInitializeData();
+        setupEventListeners();
+        startPolling();
+    }
+    
+    // --- РАБОТА С API JSONBIN.IO ---
+
+    // Получение и инициализация данных
+    async function fetchAndInitializeData() {
+        try {
+            const response = await fetch(`${API_URL}/latest`, { headers: { ...HEADERS, 'X-Bin-Meta': false } });
+            if (response.status === 404 || response.headers.get('content-length') === '0') {
+                console.log('Bin is empty or not found. Initializing...');
+                await initializeBin();
+            } else {
+                appData = await response.json();
+                // Проверка целостности данных
+                if (!isDataStructureValid(appData)) {
+                    console.log('Data structure is invalid. Re-initializing...');
+                    await initializeBin();
+                }
+            }
+        } catch (error) {
+            console.error('Error fetching data:', error);
+            // Попытка инициализировать, если произошла сетевая ошибка
+            await initializeBin();
+        }
+        renderApp();
+    }
+    
+    // Инициализация пустого хранилища
+    async function initializeBin() {
+        const defaultData = getDefaultDataStructure();
+        await updateData(defaultData);
+        appData = defaultData;
+    }
+
+    // Отправка обновленных данных на сервер
+    async function updateData(data) {
+        if (isUpdating) return;
+        isUpdating = true;
+        try {
+            await fetch(API_URL, {
+                method: 'PUT',
+                headers: HEADERS,
+                body: JSON.stringify(data)
+            });
+            appData = data; // Локальное состояние обновляется после успешной отправки
+        } catch (error) {
+            console.error('Error updating data:', error);
+        } finally {
+            isUpdating = false;
+        }
+    }
+
+    // --- СИНХРОНИЗАЦИЯ (ПОЛЛИНГ) ---
+    function startPolling() {
+        if (pollingIntervalId) clearInterval(pollingIntervalId);
+        pollingIntervalId = setInterval(async () => {
+            if (isUpdating) return;
+            try {
+                const response = await fetch(`${API_URL}/latest`, { headers: { ...HEADERS, 'X-Bin-Meta': false } });
+                if (response.ok) {
+                    const latestData = await response.json();
+                    if (JSON.stringify(latestData) !== JSON.stringify(appData)) {
+                        appData = latestData;
+                        renderApp();
+                    }
+                }
+            } catch (error) {
+                console.error('Polling error:', error);
+            }
+        }, POLLING_INTERVAL);
+    }
+
+    // --- ОСНОВНАЯ ФУНКЦИЯ РЕНДЕРИНГА ---
+    function renderApp() {
+        if (!appData) return;
+        
+        // Проверка и обработка взаимодействий (поцелуй, объятие)
+        handleInteractionAnimations();
+
+        // Рендеринг каждой вкладки
+        renderHeartsTab();
+        renderQuestionTab();
+        renderGameTab();
+        renderStarMapTab();
+        
+        // Рендеринг общих элементов
+        renderSoundToggle();
+    }
+    
+    // --- УСТАНОВКА ОБРАБОТЧИКОВ СОБЫТИЙ ---
+    function setupEventListeners() {
+        // Навигация
+        document.querySelectorAll('.nav-button').forEach(button => {
+            if (button.dataset.tab) {
+                button.addEventListener('click', () => switchTab(button.dataset.tab));
+            }
+        });
+        
+        // Вкладка "Сердца"
+        document.getElementById('he-heart').addEventListener('click', () => openHeartModal('He'));
+        document.getElementById('she-heart').addEventListener('click', () => openHeartModal('She'));
+        document.getElementById('kiss-button').addEventListener('click', sendKiss);
+        document.getElementById('hug-button').addEventListener('click', sendHug);
+        document.getElementById('save-heart-changes').addEventListener('click', saveHeartChanges);
+
+        // Вкладка "Вопрос дня"
+        document.getElementById('submit-answer-button').addEventListener('click', submitAnswer);
+
+        // Вкладка "Звёздная карта"
+        setupCanvas();
+        document.getElementById('clear-canvas-button').addEventListener('click', confirmClearCanvas);
+        document.getElementById('star-color-picker').addEventListener('change', (e) => {
+            // Цвет меняется сразу, без сохранения в appData для простоты
+            // Если нужна синхронизация цвета, нужно будет добавить в appData
+        });
+
+        // Звук
+        document.getElementById('sound-toggle').addEventListener('click', toggleSound);
+
+        // Автоматическая смена комплиментов
+        setInterval(changeCompliment, 9000);
+    }
+
+    // --- ЛОГИКА ВКЛАДОК ---
+
+    function switchTab(tabId) {
+        document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+        document.querySelectorAll('.nav-button[data-tab]').forEach(btn => btn.classList.remove('active'));
+        
+        document.getElementById(`tab-${tabId}`).classList.add('active');
+        document.querySelector(`.nav-button[data-tab="${tabId}"]`).classList.add('active');
+    }
+
+    // --- ВКЛАДКА 1: СЕРДЦА ---
+    
+    function renderHeartsTab() {
+        const { He, She } = appData;
+        // Сердце "Он"
+        const heHeart = document.getElementById('he-heart');
+        heHeart.style.backgroundColor = He.heart.color;
+        heHeart.textContent = He.heart.emoji;
+        heHeart.style.setProperty('--heart-he-color', He.heart.color);
+        // Сердце "Она"
+        const sheHeart = document.getElementById('she-heart');
+        sheHeart.style.backgroundColor = She.heart.color;
+        sheHeart.textContent = She.heart.emoji;
+        sheHeart.style.setProperty('--heart-she-color', She.heart.color);
+    }
+    
+    function openHeartModal(user) {
+        if (user !== currentUser) return; // Можно менять только своё сердце
+        
+        const modal = document.getElementById('heart-modal');
+        modal.dataset.user = user;
+        
+        const colorPalette = modal.querySelector('.color-palette');
+        const emojiPalette = modal.querySelector('.emoji-palette');
+        
+        const colors = ['#ff4d4d', '#ff8fab', '#a481f1', '#4d79ff', '#52d1a6', '#f5d76e', '#ff9a8b'];
+        const emojis = ['❤️', '💖', '✨', '🔥', '🥰', '🌟', '💫', '💞'];
+        
+        colorPalette.innerHTML = colors.map(c => `<div class="color-option" style="background-color: ${c}" data-color="${c}"></div>`).join('');
+        emojiPalette.innerHTML = emojis.map(e => `<div class="emoji-option" data-emoji="${e}">${e}</div>`).join('');
+
+        // Выбор текущих
+        const currentHeart = appData[user].heart;
+        const selectedColor = colorPalette.querySelector(`[data-color="${currentHeart.color}"]`);
+        if(selectedColor) selectedColor.classList.add('selected');
+        const selectedEmoji = emojiPalette.querySelector(`[data-emoji="${currentHeart.emoji}"]`);
+        if(selectedEmoji) selectedEmoji.classList.add('selected');
+
+        colorPalette.querySelectorAll('.color-option').forEach(el => el.addEventListener('click', () => {
+            colorPalette.querySelector('.selected')?.classList.remove('selected');
+            el.classList.add('selected');
+        }));
+        emojiPalette.querySelectorAll('.emoji-option').forEach(el => el.addEventListener('click', () => {
+            emojiPalette.querySelector('.selected')?.classList.remove('selected');
+            el.classList.add('selected');
+        }));
+        
+        modal.classList.remove('hidden');
+    }
+
+    function saveHeartChanges() {
+        const modal = document.getElementById('heart-modal');
+        const user = modal.dataset.user;
+        const selectedColor = modal.querySelector('.color-option.selected')?.dataset.color;
+        const selectedEmoji = modal.querySelector('.emoji-option.selected')?.dataset.emoji;
+
+        if (selectedColor) appData[user].heart.color = selectedColor;
+        if (selectedEmoji) appData[user].heart.emoji = selectedEmoji;
+        
+        modal.classList.add('hidden');
+        renderHeartsTab();
+        updateData(appData);
+    }
+
+    function sendKiss() {
+        appData.interactions.kissFrom = currentUser;
+        updateData(appData);
+    }
+
+    function sendHug() {
+        appData.interactions.hugFrom = currentUser;
+        updateData(appData);
+    }
+
+    function handleInteractionAnimations() {
+        const { kissFrom, hugFrom } = appData.interactions;
+
+        if (kissFrom) {
+            const sender = kissFrom;
+            const receiver = sender === 'He' ? 'She' : 'He';
+            
+            const senderHeart = document.getElementById(`${sender.toLowerCase()}-heart-wrapper`);
+            const receiverHeart = document.getElementById(`${receiver.toLowerCase()}-heart-wrapper`);
+            
+            const particle = document.createElement('div');
+            particle.textContent = '💋';
+            particle.className = 'kiss-particle';
+            document.querySelector('.hearts-interaction-area').appendChild(particle);
+
+            const startRect = senderHeart.getBoundingClientRect();
+            const endRect = receiverHeart.getBoundingClientRect();
+            
+            particle.style.left = `${startRect.left + startRect.width / 2}px`;
+            particle.style.top = `${startRect.top + startRect.height / 2}px`;
+            
+            const tx = endRect.left - startRect.left;
+            const ty = endRect.top - startRect.top;
+
+            particle.style.setProperty('--tx', `${tx}px`);
+            particle.style.setProperty('--ty', `${ty}px`);
+            
+            setTimeout(() => particle.remove(), 1500);
+
+            // Сбрасываем флаг, чтобы анимация не повторялась
+            appData.interactions.kissFrom = null;
+            updateData(appData);
+        }
+
+        if (hugFrom) {
+            const heHeart = document.getElementById('he-heart-wrapper');
+            const sheHeart = document.getElementById('she-heart-wrapper');
+            
+            heHeart.style.setProperty('--hug-translate', '50%');
+            sheHeart.style.setProperty('--hug-translate', '-50%');
+            
+            heHeart.classList.add('hugging');
+            sheHeart.classList.add('hugging');
+            
+            setTimeout(() => {
+                heHeart.classList.remove('hugging');
+                sheHeart.classList.remove('hugging');
+            }, 2000);
+
+            appData.interactions.hugFrom = null;
+            updateData(appData);
+        }
+    }
+
+    function changeCompliment() {
+        const compliments = [
+            "Ты — моё самое большое счастье.", "С тобой каждый день особенный.", "Твоя улыбка освещает мой мир.",
+            "Я люблю тебя больше, чем слова могут выразить.", "Ты делаешь меня лучше.", "Вместе мы можем всё.",
+            "Ты моё вдохновение.", "Каждая минута с тобой — это подарок.", "Наша любовь — это магия."
+        ];
+        const complimentText = document.getElementById('compliment-text');
+        complimentText.style.opacity = '0';
+        setTimeout(() => {
+            const randomIndex = Math.floor(Math.random() * compliments.length);
+            complimentText.textContent = compliments[randomIndex];
+            complimentText.style.opacity = '1';
+        }, 1000);
+    }
+
+    // --- ВКЛАДКА 2: ВОПРОС ДНЯ И ИСТОРИЯ ---
+    function renderQuestionTab() {
+        checkForNewDay(); // Проверяем, не наступил ли новый день
+
+        const { dailyQuestion, answerHistory } = appData;
+        
+        const questionText = document.getElementById('daily-question-text');
+        const questions = getDailyQuestions();
+        questionText.textContent = questions[dailyQuestion.questionId];
+
+        const userAnswerInput = document.getElementById('user-answer');
+        const submitButton = document.getElementById('submit-answer-button');
+        const waitingPartner = document.getElementById('waiting-partner');
+        const answersDisplay = document.getElementById('answers-display');
+        const answerSection = document.getElementById('answer-section');
+
+        const myAnswer = dailyQuestion.answers[currentUser];
+        const partnerAnswer = dailyQuestion.answers[currentUser === 'He' ? 'She' : 'He'];
+
+        if (myAnswer) {
+            answerSection.classList.add('hidden');
+            if (partnerAnswer) {
+                // Оба ответили
+                waitingPartner.classList.add('hidden');
+                answersDisplay.classList.remove('hidden');
+                document.getElementById('he-answer-text').textContent = dailyQuestion.answers.He;
+                document.getElementById('she-answer-text').textContent = dailyQuestion.answers.She;
+            } else {
+                // Только я ответил
+                waitingPartner.classList.remove('hidden');
+                answersDisplay.classList.add('hidden');
+            }
+        } else {
+            // Я еще не ответил
+            answerSection.classList.remove('hidden');
+            userAnswerInput.value = '';
+            waitingPartner.classList.add('hidden');
+            answersDisplay.classList.add('hidden');
+        }
+
+        // Рендеринг истории
+        const historyContainer = document.getElementById('answer-history');
+        historyContainer.innerHTML = '';
+        answerHistory.slice().reverse().forEach(entry => {
+            const entryDiv = document.createElement('div');
+            entryDiv.className = 'history-entry';
+            entryDiv.innerHTML = `
+                <div class="date">${entry.date}</div>
+                <p class="question">${entry.question}</p>
+                <div class="answers">
+                    <p><strong>Он:</strong> ${entry.answers.He}</p>
+                    <p><strong>Она:</strong> ${entry.answers.She}</p>
+                </div>
+            `;
+            historyContainer.appendChild(entryDiv);
+        });
+    }
+
+    function submitAnswer() {
+        const answer = document.getElementById('user-answer').value.trim();
+        if (!answer) return;
+
+        appData.dailyQuestion.answers[currentUser] = answer;
+
+        const partner = currentUser === 'He' ? 'She' : 'He';
+        if (appData.dailyQuestion.answers[partner]) {
+            // Партнер уже ответил, сохраняем в историю
+            saveToHistory();
+        }
+
+        updateData(appData).then(renderQuestionTab);
+    }
+
+    function saveToHistory() {
+        const { dailyQuestion } = appData;
+        const questions = getDailyQuestions();
+        appData.answerHistory.push({
+            date: dailyQuestion.date,
+            question: questions[dailyQuestion.questionId],
+            answers: { ...dailyQuestion.answers }
+        });
+    }
+    
+    function checkForNewDay() {
+        const today = new Date().toISOString().split('T')[0];
+        if (appData.dailyQuestion.date !== today) {
+            // Новый день! Сбрасываем вопрос и ответы
+            const questions = getDailyQuestions();
+            appData.dailyQuestion.date = today;
+            appData.dailyQuestion.questionId = new Date().getDate() % questions.length;
+            appData.dailyQuestion.answers = { He: null, She: null };
+            updateData(appData);
+        }
+    }
+
+    // --- ВКЛАДКА 3: ТЕКСТОВАЯ ИГРА ---
+    function renderGameTab() {
+        const { game } = appData;
+        const story = getGameStory();
+        const currentNode = story[game.currentNode];
+
+        document.getElementById('sync-scale').textContent = game.syncScale;
+        document.getElementById('inventory').textContent = game.inventory.length > 0 ? game.inventory.join(', ') : 'пусто';
+        document.getElementById('game-story').innerHTML = currentNode.text;
+
+        const choicesContainer = document.getElementById('game-choices');
+        const waitingMessage = document.getElementById('game-waiting-message');
+        choicesContainer.innerHTML = '';
+
+        const myChoice = game.choices[currentUser];
+        const partnerChoice = game.choices[currentUser === 'He' ? 'She' : 'He'];
+
+        if (myChoice) {
+            waitingMessage.classList.remove('hidden');
+            choicesContainer.classList.add('hidden');
+        } else {
+            waitingMessage.classList.add('hidden');
+            choicesContainer.classList.remove('hidden');
+            currentNode.choices.forEach((choice, index) => {
+                const button = document.createElement('button');
+                button.className = 'choice-button';
+                button.textContent = choice.text;
+                button.addEventListener('click', () => makeGameChoice(index));
+                choicesContainer.appendChild(button);
+            });
+        }
+        
+        // Если оба выбрали, обрабатываем результат
+        if (myChoice !== null && partnerChoice !== null) {
+            processGameTurn();
+        }
+    }
+
+    function makeGameChoice(choiceIndex) {
+        appData.game.choices[currentUser] = choiceIndex;
+        updateData(appData).then(renderGameTab);
+    }
+
+    function processGameTurn() {
+        const { game } = appData;
+        const story = getGameStory();
+        const currentNode = story[game.currentNode];
+        
+        const myChoice = currentNode.choices[game.choices[currentUser]];
+        const partnerChoice = currentNode.choices[game.choices[currentUser === 'He' ? 'She' : 'He']];
+
+        // Логика игры (упрощенная)
+        if (myChoice.id === partnerChoice.id) {
+            game.syncScale = Math.min(100, game.syncScale + 10);
+        } else {
+            game.syncScale = Math.max(0, game.syncScale - 5);
+        }
+
+        if (myChoice.item) game.inventory.push(myChoice.item);
+        if (partnerChoice.item && myChoice.item !== partnerChoice.item) game.inventory.push(partnerChoice.item);
+        
+        // Переход к следующему узлу (берем из выбора первого игрока)
+        game.currentNode = myChoice.next;
+        game.choices = { He: null, She: null };
+        
+        updateData(appData).then(renderGameTab);
+    }
+    
+    // --- ВКЛАДКА 4: ЗВЁЗДНАЯ КАРТА ---
+    let canvas, ctx, drawing = false, lastPos = null;
+
+    function setupCanvas() {
+        canvas = document.getElementById('star-canvas');
+        ctx = canvas.getContext('2d');
+        
+        // Адаптация размера canvas
+        function resizeCanvas() {
+            const rect = canvas.getBoundingClientRect();
+            canvas.width = rect.width;
+            canvas.height = rect.height;
+            renderStarMapTab(); // Перерисовать при изменении размера
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        canvas.addEventListener('mousedown', startDrawing);
+        canvas.addEventListener('mouseup', stopDrawing);
+        canvas.addEventListener('mouseout', stopDrawing);
+        canvas.addEventListener('mousemove', draw);
+
+        canvas.addEventListener('touchstart', (e) => { e.preventDefault(); startDrawing(e.touches[0]); });
+        canvas.addEventListener('touchend', (e) => { e.preventDefault(); stopDrawing(); });
+        canvas.addEventListener('touchmove', (e) => { e.preventDefault(); draw(e.touches[0]); });
+    }
+
+    function renderStarMapTab() {
+        if (!ctx || !appData) return;
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        appData.starMap.paths.forEach(path => {
+            ctx.beginPath();
+            ctx.strokeStyle = path.color;
+            ctx.lineWidth = 2;
+            ctx.lineCap = 'round';
+            ctx.moveTo(path.points[0].x * canvas.width, path.points[0].y * canvas.height);
+            for (let i = 1; i < path.points.length; i++) {
+                ctx.lineTo(path.points[i].x * canvas.width, path.points[i].y * canvas.height);
+            }
+            ctx.stroke();
+        });
+    }
+
+    function startDrawing(e) {
+        drawing = true;
+        const pos = getMousePos(e);
+        const color = document.getElementById('star-color-picker').value;
+        appData.starMap.paths.push({ color: color, points: [pos] });
+        lastPos = pos;
+    }
+
+    function draw(e) {
+        if (!drawing) return;
+        const pos = getMousePos(e);
+        const currentPath = appData.starMap.paths[appData.starMap.paths.length - 1];
+        currentPath.points.push(pos);
+        
+        // Рисуем локально для плавности
+        ctx.beginPath();
+        ctx.strokeStyle = currentPath.color;
+        ctx.lineWidth = 2;
+        ctx.lineCap = 'round';
+        ctx.moveTo(lastPos.x * canvas.width, lastPos.y * canvas.height);
+        ctx.lineTo(pos.x * canvas.width, pos.y * canvas.height);
+        ctx.stroke();
+        lastPos = pos;
+    }
+
+    function stopDrawing() {
+        if (!drawing) return;
+        drawing = false;
+        lastPos = null;
+        updateData(appData); // Отправляем данные на сервер после окончания рисования
+    }
+
+    function getMousePos(e) {
+        const rect = canvas.getBoundingClientRect();
         return {
-            hearts: { he: { color: '#4169e1', emoji: '❤️' }, she: { color: '#ff69b4', emoji: '❤️' } },
-            qotd: { date: "1970-01-01", answers: { he: null, she: null } },
-            action: { from: null, type: null, timestamp: 0 },
-            qotdHistory: [],
-            game: { node: 'start', choices: { he: null, she: null }, inventory: [], syncScore: 50 },
+            x: (e.clientX - rect.left) / canvas.width,
+            y: (e.clientY - rect.top) / canvas.height
         };
     }
 
-    // --- API JSONBIN.IO ---
-    async function apiCall(url, method = 'GET', body = null) {
-        const headers = { 'Content-Type': 'application/json', 'X-Master-Key': X_MASTER_KEY, 'X-Access-Key': '$2a$10$EIdkYYUdFQ6kRpT0OobuU.YjsENOEz9Un3ljT398QIIR0nRqXmFEq' };
-        try {
-            const options = { method, headers, body: body ? JSON.stringify(body) : null };
-            const response = await fetch(url, options);
-            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-            if (response.status === 204 || response.status === 201) return {};
-            return await response.json();
-        } catch (error) { console.error("API call failed:", error); alert("Ошибка сети. Попробуйте обновить страницу."); return null; }
+    function confirmClearCanvas() {
+        if (confirm('Вы уверены, что хотите очистить холст? Это действие необратимо.')) {
+            appData.starMap.paths = [];
+            updateData(appData).then(renderStarMapTab);
+        }
     }
-    const readBin = async (binId) => (await apiCall(`${JSONBIN_URL}/${binId}/latest`))?.record;
-    const updateBin = (binId, data) => apiCall(`${JSONBIN_URL}/${binId}`, 'PUT', data);
-    
-    // --- ЛОГИКА ПРИЛОЖЕНИЯ ---
-    function switchTab(tabId) { dom.tabs.forEach(t => t.classList.toggle('active', t.dataset.tab === tabId)); dom.tabContents.forEach(c => c.classList.toggle('active', c.id === `${tabId}-tab`)); }
-    
-    function startComplimentCycle() {
-        if (state.complimentTimer) clearInterval(state.complimentTimer);
-        // Показываем первый комплимент сразу
-        dom.complimentText.textContent = compliments[Math.floor(Math.random() * compliments.length)];
-        dom.complimentText.style.opacity = 1;
 
-        state.complimentTimer = setInterval(() => {
-            dom.complimentText.style.opacity = 0;
-            setTimeout(() => {
-                dom.complimentText.textContent = compliments[Math.floor(Math.random() * compliments.length)];
-                dom.complimentText.style.opacity = 1;
-            }, 1000);
-        }, COMPLIMENT_INTERVAL);
+    // --- ЗВУК ---
+    const music = document.getElementById('background-music');
+    function toggleSound() {
+        appData[currentUser].soundOn = !appData[currentUser].soundOn;
+        renderSoundToggle();
+        updateData(appData);
+    }
+
+    function renderSoundToggle() {
+        const soundButton = document.getElementById('sound-toggle');
+        if (appData[currentUser].soundOn) {
+            soundButton.textContent = '🔊';
+            music.play().catch(e => console.log("Autoplay was prevented."));
+        } else {
+            soundButton.textContent = '🎵';
+            music.pause();
+        }
+    }
+
+    // --- ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ И ДАННЫЕ ---
+    
+    function isDataStructureValid(data) {
+        const keys = ['He', 'She', 'interactions', 'dailyQuestion', 'answerHistory', 'game', 'starMap'];
+        return data && keys.every(key => key in data);
+    }
+
+    function getDefaultDataStructure() {
+        const today = new Date().toISOString().split('T')[0];
+        const questions = getDailyQuestions();
+        return {
+            "He": { "heart": { "color": "#4d79ff", "emoji": "💙" }, "soundOn": false },
+            "She": { "heart": { "color": "#ff8fab", "emoji": "💖" }, "soundOn": false },
+            "interactions": { "kissFrom": null, "hugFrom": null },
+            "dailyQuestion": {
+                "date": today,
+                "questionId": new Date().getDate() % questions.length,
+                "answers": { "He": null, "She": null }
+            },
+            "answerHistory": [],
+            "game": {
+                "currentNode": "start",
+                "inventory": [],
+                "syncScale": 50,
+                "choices": { "He": null, "She": null }
+            },
+            "starMap": { "paths": [] }
+        };
     }
     
-    // --- ОБНОВЛЕНИЕ UI ---
-    function updateUI(data) {
-        state.localData = data;
-        
-        // Сердца
-        dom.heHeart.style.color = data.hearts.he.color;
-        dom.heEmoji.textContent = data.hearts.he.emoji;
-        dom.sheHeart.style.color = data.hearts.she.color;
-        dom.sheEmoji.textContent = data.hearts.she.emoji;
+    function getDailyQuestions() {
+        return [
+            "Что заставило тебя улыбнуться сегодня?",
+            "Какое твое самое теплое воспоминание о нас?",
+            "Если бы мы могли отправиться куда угодно прямо сейчас, куда бы ты хотел(а)?",
+            "Какой фильм или сериал ты бы хотел(а) пересмотреть со мной?",
+            "Опиши идеальный вечер для нас двоих.",
+            "Какая песня напоминает тебе обо мне?",
+            "Что ты ценишь во мне больше всего?",
+            "Какая у тебя есть маленькая мечта, о которой я не знаю?",
+            "Что самое смешное, что мы делали вместе?",
+            "Какой суперсилой ты бы хотел(а) обладать и почему?"
+        ];
+    }
 
-        // Вопрос Дня
-        const today = new Date().toISOString().slice(0, 10);
-        let currentQuestion = data.qotd;
-        // Если дата в данных не сегодняшняя, сбрасываем ответы
-        if(currentQuestion.date !== today) {
-            currentQuestion = { date: today, answers: { he: null, she: null } };
-        }
-        
-        const questionIndex = new Date(today).getDate() % questions.length;
-        dom.qotdQuestion.textContent = questions[questionIndex];
-
-        const myAnswer = currentQuestion.answers[state.userRole];
-        const partnerRole = state.userRole === 'he' ? 'she' : 'he';
-        const partnerAnswer = currentQuestion.answers[partnerRole];
-
-        dom.myAnswerInput.disabled = !!myAnswer;
-        dom.submitAnswerBtn.disabled = !!myAnswer;
-        dom.myAnswerInput.value = myAnswer || '';
-
-        dom.qotdPartnerAnswer.classList.toggle('hidden', !partnerAnswer);
-        dom.partnerAnswerText.textContent = partnerAnswer || '';
-        
-        if (myAnswer) {
-            dom.qotdStatus.textContent = partnerAnswer ? "Оба ответили! Ответы сохранены в историю." : "Отлично! Ждём ответ партнёра...";
-        } else {
-            dom.qotdStatus.textContent = partnerAnswer ? "Партнёр уже ответил. Теперь ваша очередь!" : "Напишите свой ответ...";
-        }
-
-
-        // История
-        dom.historyList.innerHTML = '';
-        if (data.qotdHistory && data.qotdHistory.length > 0) {
-            data.qotdHistory.slice().reverse().forEach(item => {
-                const itemEl = document.createElement('div');
-                itemEl.className = 'history-item';
-                itemEl.innerHTML = `<div class="date">${item.date}</div><div class="question">"${item.question}"</div><div class="answer he"><strong>Он:</strong> ${item.answers.he}</div><div class="answer she"><strong>Она:</strong> ${item.answers.she}</div>`;
-                dom.historyList.appendChild(itemEl);
-            });
-        } else {
-            dom.historyList.innerHTML = '<p>Здесь будут появляться ваши ответы на "Вопрос дня".</p>';
-        }
-
-        // Анимации
-        if (data.action && data.action.timestamp > state.lastActionTimestamp) {
-            state.lastActionTimestamp = data.action.timestamp;
-            if (data.action.from !== state.userRole) {
-                // ... логика запуска анимаций...
+    function getGameStory() {
+        return {
+            "start": {
+                "text": "Вы стоите перед древним, заросшим лианами храмом. Тяжелая каменная дверь преграждает путь. Слева от двери — странные символы на стене, справа — небольшой рычаг, покрытый ржавчиной. Что вы делаете?",
+                "choices": [
+                    { "text": "Попытаться расшифровать символы", "id": "decode", "next": "decode_result" },
+                    { "text": "Дернуть за ржавый рычаг", "id": "pull", "next": "pull_result" }
+                ]
+            },
+            "decode_result": {
+                "text": "Вы вместе разглядываете символы. Кажется, это древняя головоломка. После долгих раздумий вы понимаете, что это код. Дверь со скрипом открывается! Ваша синхронность растет.",
+                "choices": [
+                    { "text": "Войти в темный проход", "id": "enter", "next": "hall" }
+                ]
+            },
+            "pull_result": {
+                "text": "Вы с силой дергаете за рычаг. Раздается скрежет, и из-под земли поднимается решетка, блокируя путь назад. Но дверь в храм открывается. Немного рискованно!",
+                "choices": [
+                    { "text": "Осторожно заглянуть внутрь", "id": "enter", "next": "hall" }
+                ]
+            },
+            "hall": {
+                "text": "Вы входите в большой зал. В центре стоит пьедестал, на котором лежит светящийся кристалл. В дальнем конце зала — две двери: одна украшена изображением солнца, другая — луны. Куда пойдете?",
+                "choices": [
+                    { "text": "К двери Солнца", "id": "sun", "next": "sun_room" },
+                    { "text": "К двери Луны", "id": "moon", "next": "moon_room" },
+                    { "text": "Взять кристалл с пьедестала", "id": "crystal", "item": "Светящийся кристалл", "next": "hall_with_crystal" }
+                ]
+            },
+            "hall_with_crystal": {
+                "text": "Вы взяли кристалл. Он тепло пульсирует в руках. Двери Солнца и Луны все еще ждут вашего выбора.",
+                "choices": [
+                    { "text": "К двери Солнца", "id": "sun", "next": "sun_room" },
+                    { "text": "К двери Луны", "id": "moon", "next": "moon_room" }
+                ]
+            },
+            "sun_room": {
+                "text": "Это комната-ловушка! Стены начинают сдвигаться. Конец игры.",
+                "choices": [
+                    { "text": "Начать заново", "id": "restart", "next": "start" }
+                ]
+            },
+            "moon_room": {
+                "text": "За дверью вы находите сокровищницу, полную древних артефактов. Вы вместе прошли испытание! Победа!",
+                "choices": [
+                    { "text": "Начать заново", "id": "restart", "next": "start" }
+                ]
             }
-        }
+        };
     }
 
-    // --- ОБРАБОТЧИКИ СОБЫТИЙ ---
-    function handleLogin() {
-        const code = dom.loginCodeInput.value;
-        let userRole = null;
-
-        if (code === CODE_FOR_HE) {
-            userRole = 'he';
-        } else if (code === CODE_FOR_SHE) {
-            userRole = 'she';
-        }
-
-        if (userRole) {
-            startSession(STATIC_BIN_ID, userRole);
-        } else {
-            alert('Неверный код. Попробуйте снова.');
-            dom.loginCodeInput.value = '';
-        }
-    }
-
-    function openControls(role) {
-        if (role === state.userRole) {
-            dom.controls.classList.remove('hidden');
-            dom.controls.dataset.editing = role;
-        } else {
-            alert("Менять можно только своё сердечко :)");
-        }
-    }
-
-    async function handleConfirmChoice() {
-        const role = dom.controls.dataset.editing;
-        const selectedColor = dom.colorPalette.querySelector('.swatch-selected');
-        const selectedEmoji = dom.emojiPalette.querySelector('.swatch-selected');
-        if (!role || !selectedColor || !selectedEmoji) return;
-        
-        const newData = { ...state.localData };
-        newData.hearts[role].color = selectedColor.dataset.color;
-        newData.hearts[role].emoji = selectedEmoji.dataset.emoji;
-        
-        dom.controls.classList.add('hidden');
-        updateUI(newData); // Локальное обновление для мгновенной реакции
-        await updateBin(state.binId, newData);
-    }
-    
-    async function handleSubmitAnswer() {
-        const answer = dom.myAnswerInput.value.trim();
-        if (!answer) {
-            alert('Пожалуйста, напишите ответ.');
-            return;
-        }
-        
-        const today = new Date().toISOString().slice(0, 10);
-        const questionIndex = new Date(today).getDate() % questions.length;
-        const questionText = questions[questionIndex];
-
-        let newData = JSON.parse(JSON.stringify(state.localData));
-
-        // Если день сменился, создаем новый объект qotd
-        if(newData.qotd.date !== today) {
-            newData.qotd = { date: today, answers: { he: null, she: null } };
-        }
-
-        newData.qotd.answers[state.userRole] = answer;
-        
-        const partnerRole = state.userRole === 'he' ? 'she' : 'he';
-        // Если партнёр тоже ответил, сохраняем в историю
-        if (newData.qotd.answers[partnerRole]) {
-            if (!newData.qotdHistory) newData.qotdHistory = [];
-            // Проверяем, чтобы не дублировать запись
-            const alreadyExists = newData.qotdHistory.some(item => item.date === today);
-            if (!alreadyExists) {
-                newData.qotdHistory.push({
-                    date: today,
-                    question: questionText,
-                    answers: newData.qotd.answers
-                });
-            }
-        }
-        
-        updateUI(newData);
-        await updateBin(state.binId, newData);
-    }
-
-    async function sendAction(type) {
-        const newData = { ...state.localData, action: { from: state.userRole, type: type, timestamp: Date.now() } };
-        updateUI(newData);
-        await updateBin(state.binId, newData);
-    }
-    
-    // --- ИНИЦИАЛИЗАЦИЯ ---
-    function setupEventListeners() {
-        dom.loginBtn.addEventListener('click', handleLogin);
-        dom.loginCodeInput.addEventListener('keyup', (e) => e.key === 'Enter' && handleLogin());
-        dom.tabs.forEach(tab => tab.addEventListener('click', () => switchTab(tab.dataset.tab)));
-        dom.heHeart.addEventListener('click', () => openControls('he'));
-        dom.sheHeart.addEventListener('click', () => openControls('she'));
-        dom.confirmChoiceBtn.addEventListener('click', handleConfirmChoice);
-        dom.submitAnswerBtn.addEventListener('click', handleSubmitAnswer);
-        dom.sendKissBtn.addEventListener('click', () => sendAction('kiss'));
-        dom.sendHugBtn.addEventListener('click', () => sendAction('hug'));
-    }
-
-    async function startSession(binId, role) {
-        state.binId = binId;
-        state.userRole = role;
-        showScreen('main');
-        
-        dom.colorPalette.innerHTML = colors.map(c => `<div class="color-swatch" style="background-color:${c}" data-color="${c}"></div>`).join('');
-        dom.emojiPalette.innerHTML = emojis.map(e => `<div class="emoji-swatch" data-emoji="${e}">${e}</div>`).join('');
-        document.querySelectorAll('.color-swatch, .emoji-swatch').forEach(el => el.addEventListener('click', (e) => {
-            e.target.parentElement.querySelectorAll('.swatch-selected').forEach(s => s.classList.remove('swatch-selected'));
-            e.target.classList.add('swatch-selected');
-        }));
-
-        startComplimentCycle();
-        
-        await pollServer();
-        state.pollingTimer = setInterval(pollServer, POLLING_INTERVAL);
-    }
-    
-    async function pollServer() {
-        if (!state.binId) return;
-        const data = await readBin(state.binId);
-        
-        // **ИСПРАВЛЕНИЕ**: Проверяем, есть ли в данных ключевые разделы. Если нет - инициализируем.
-        if (!data || !data.hearts || !data.game) {
-            const initialData = getInitialState();
-            await updateBin(state.binId, initialData);
-            if (JSON.stringify(initialData) !== JSON.stringify(state.localData)) {
-                updateUI(initialData);
-            }
-        } else if (JSON.stringify(data) !== JSON.stringify(state.localData)) {
-            updateUI(data);
-        }
-    }
-    
-    function init() {
-        showScreen('loader');
-        setTimeout(() => {
-            dom.loader.classList.add('fade-out');
-            setTimeout(() => {
-                showScreen('room');
-            }, 1000);
-        }, 3000);
-        setupEventListeners();
-    }
-
+    // --- ЗАПУСК ---
     init();
 });
